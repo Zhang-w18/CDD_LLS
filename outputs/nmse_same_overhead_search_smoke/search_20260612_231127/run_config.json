@@ -1,0 +1,24 @@
+{
+  "delay_spreads_ns": [
+    1.0,
+    30.0
+  ],
+  "cdd_delays": [
+    64,
+    128
+  ],
+  "dmrs_spacings": [
+    6
+  ],
+  "snrs": [
+    0.0
+  ],
+  "basis_thresholds": [
+    0.9,
+    0.95,
+    0.99
+  ],
+  "trials": 2,
+  "seed": 20260612,
+  "same_overhead_definition": "Alg3 uses equal-total FDM split, sum_m |P_m| = |P|; no equal-per-port extra-overhead curve is included."
+}

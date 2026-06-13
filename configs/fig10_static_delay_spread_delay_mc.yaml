@@ -1,0 +1,73 @@
+antenna:
+  n_tx: 2
+  n_rx: 4
+
+resource:
+  carrier_bandwidth_mhz: 100
+  scs_khz: 30
+  n_fft: 4096
+  n_prbs: 48
+  pdsch_n_symbols: 10
+  dmrs_symbol_indices: [2, 7]
+  dmrs_spacing_sc: 6
+  prg_size_rb: 4
+
+channel:
+  model: tdl
+  delay_spread_ns: 30
+  max_delay_factor: 8
+
+transmission:
+  tx_scheme: CDD
+  cdd_delay_vector: null
+  cdd_base_delay: 16
+
+channel_estimation:
+  ce_method: RMMSE_WB_KNOWN
+  diagonal_loading: 1.0e-8
+  basis_support: truncated
+  basis_energy_threshold: 0.99
+
+mcs:
+  table: nr_256qam
+  index: 8
+
+receiver:
+  max_ldpc_iterations: 8
+
+simulation:
+  snr_range_db: [-6, 8, 2]
+  n_trials_per_snr: 10
+  max_trials_per_snr: 10
+  min_block_errors: 0
+  output_dir: outputs/fig10_static_delay_spread_delay_mc
+  seed: 2604697
+  bler_target: 0.10
+  common_random_numbers: true
+
+plots:
+  enabled: true
+
+scenarios:
+  - scenario_id: fig10_static_ds30
+    channel:
+      delay_spread_ns: 30
+  - scenario_id: fig10_static_ds100
+    channel:
+      delay_spread_ns: 100
+
+variants:
+  - variant_id: direct_rmmse_wb
+    channel_estimation:
+      ce_method: RMMSE_WB_KNOWN
+  - variant_id: structural_basis
+    channel_estimation:
+      ce_method: RECON_BASIS_LMMSE
+      basis_support: truncated
+      basis_energy_threshold: 0.99
+  - variant_id: ideal_csi
+    channel_estimation:
+      ce_method: IDEAL_CSI
+
+sweeps:
+  cdd_base_delays: [16, 32]

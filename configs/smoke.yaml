@@ -1,0 +1,41 @@
+antenna:
+  n_tx: 2
+  n_rx: 4
+
+resource:
+  n_fft: 1024
+  n_prbs: 2
+  pdsch_n_symbols: 6
+  dmrs_symbol_indices: [1, 4]
+  dmrs_spacing_sc: 4
+  prg_size_rb: 1
+
+channel:
+  model: tdl
+  delay_spread_ns: 30
+  max_delay_factor: 4
+
+transmission:
+  tx_scheme: CDD
+  cdd_delay_vector: [0, 4]
+
+channel_estimation:
+  ce_method: RMMSE_WB_KNOWN
+  rmmse_bundle_rb: 1
+
+mcs:
+  table: nr_256qam
+  index: 5
+
+receiver:
+  max_ldpc_iterations: 8
+
+simulation:
+  snr_range_db: [0, 2, 2]
+  n_trials_per_snr: 1
+  max_trials_per_snr: 1
+  output_dir: outputs/smoke
+  seed: 7
+
+plots:
+  enabled: false

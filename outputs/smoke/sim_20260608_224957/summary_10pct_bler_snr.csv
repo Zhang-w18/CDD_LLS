@@ -1,0 +1,2 @@
+cdd_delay_vector,ce_method,delay_spread_ns,dmrs_spacing_sc,pdsch_rb,scenario_id,snr_at_target_bler_db,snr_gain_vs_prg_db,target_bler,tx_scheme,variant_id
+"0,4",RMMSE_WB_KNOWN,30.0,4,2,default,0.5,nan,0.1,CDD,single

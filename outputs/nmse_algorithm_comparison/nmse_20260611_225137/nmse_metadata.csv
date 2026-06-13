@@ -1,0 +1,337 @@
+algorithm,case_id,metadata,snr_db
+Alg1 Direct RMMSE WB 576sc,flat_ds1_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-6.0
+Alg2 Basis LMMSE E90,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-6.0
+Alg2 Basis LMMSE E95,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-6.0
+Alg2 Basis LMMSE E99,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-6.0
+Alg2 CoherenceBlock Bc0.9,flat_ds1_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 17.28, ""block_width_sc"": 576, ""cond_mean"": 1.0000000000000002, ""cond_number"": 1.0000000000000002, ""n_blocks"": 1}",-6.0
+Alg3 Port-DMRS RMMSE equal-total,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",-6.0
+Alg3 Port-DMRS RMMSE equal-per-port,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",-6.0
+Alg1 Direct RMMSE WB 576sc,flat_ds1_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-4.0
+Alg2 Basis LMMSE E90,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-4.0
+Alg2 Basis LMMSE E95,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-4.0
+Alg2 Basis LMMSE E99,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-4.0
+Alg2 CoherenceBlock Bc0.9,flat_ds1_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 17.28, ""block_width_sc"": 576, ""cond_mean"": 1.0000000000000002, ""cond_number"": 1.0000000000000002, ""n_blocks"": 1}",-4.0
+Alg3 Port-DMRS RMMSE equal-total,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",-4.0
+Alg3 Port-DMRS RMMSE equal-per-port,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",-4.0
+Alg1 Direct RMMSE WB 576sc,flat_ds1_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-2.0
+Alg2 Basis LMMSE E90,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-2.0
+Alg2 Basis LMMSE E95,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-2.0
+Alg2 Basis LMMSE E99,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",-2.0
+Alg2 CoherenceBlock Bc0.9,flat_ds1_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 17.28, ""block_width_sc"": 576, ""cond_mean"": 1.0000000000000002, ""cond_number"": 1.0000000000000002, ""n_blocks"": 1}",-2.0
+Alg3 Port-DMRS RMMSE equal-total,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",-2.0
+Alg3 Port-DMRS RMMSE equal-per-port,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",-2.0
+Alg1 Direct RMMSE WB 576sc,flat_ds1_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",0.0
+Alg2 Basis LMMSE E90,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",0.0
+Alg2 Basis LMMSE E95,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",0.0
+Alg2 Basis LMMSE E99,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",0.0
+Alg2 CoherenceBlock Bc0.9,flat_ds1_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 17.28, ""block_width_sc"": 576, ""cond_mean"": 1.0000000000000002, ""cond_number"": 1.0000000000000002, ""n_blocks"": 1}",0.0
+Alg3 Port-DMRS RMMSE equal-total,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",0.0
+Alg3 Port-DMRS RMMSE equal-per-port,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",0.0
+Alg1 Direct RMMSE WB 576sc,flat_ds1_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",2.0
+Alg2 Basis LMMSE E90,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",2.0
+Alg2 Basis LMMSE E95,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",2.0
+Alg2 Basis LMMSE E99,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",2.0
+Alg2 CoherenceBlock Bc0.9,flat_ds1_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 17.28, ""block_width_sc"": 576, ""cond_mean"": 1.0000000000000002, ""cond_number"": 1.0000000000000002, ""n_blocks"": 1}",2.0
+Alg3 Port-DMRS RMMSE equal-total,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",2.0
+Alg3 Port-DMRS RMMSE equal-per-port,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",2.0
+Alg1 Direct RMMSE WB 576sc,flat_ds1_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",4.0
+Alg2 Basis LMMSE E90,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",4.0
+Alg2 Basis LMMSE E95,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",4.0
+Alg2 Basis LMMSE E99,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",4.0
+Alg2 CoherenceBlock Bc0.9,flat_ds1_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 17.28, ""block_width_sc"": 576, ""cond_mean"": 1.0000000000000002, ""cond_number"": 1.0000000000000002, ""n_blocks"": 1}",4.0
+Alg3 Port-DMRS RMMSE equal-total,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",4.0
+Alg3 Port-DMRS RMMSE equal-per-port,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",4.0
+Alg1 Direct RMMSE WB 576sc,flat_ds1_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",6.0
+Alg2 Basis LMMSE E90,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",6.0
+Alg2 Basis LMMSE E95,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",6.0
+Alg2 Basis LMMSE E99,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",6.0
+Alg2 CoherenceBlock Bc0.9,flat_ds1_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 17.28, ""block_width_sc"": 576, ""cond_mean"": 1.0000000000000002, ""cond_number"": 1.0000000000000002, ""n_blocks"": 1}",6.0
+Alg3 Port-DMRS RMMSE equal-total,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",6.0
+Alg3 Port-DMRS RMMSE equal-per-port,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",6.0
+Alg1 Direct RMMSE WB 576sc,flat_ds1_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",8.0
+Alg2 Basis LMMSE E90,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",8.0
+Alg2 Basis LMMSE E95,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",8.0
+Alg2 Basis LMMSE E99,flat_ds1_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 1.0000000000000007, ""effective_rank"": 2.0, ""n_unknown_taps"": 2, ""pilot_count"": 288, ""support_len"": 1}",8.0
+Alg2 CoherenceBlock Bc0.9,flat_ds1_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 17.28, ""block_width_sc"": 576, ""cond_mean"": 1.0000000000000002, ""cond_number"": 1.0000000000000002, ""n_blocks"": 1}",8.0
+Alg3 Port-DMRS RMMSE equal-total,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",8.0
+Alg3 Port-DMRS RMMSE equal-per-port,flat_ds1_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",8.0
+Alg1 Direct RMMSE WB 576sc,ds30_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-6.0
+Alg2 Basis LMMSE E90,ds30_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 6002204092074.051, ""effective_rank"": 4.257352577093582, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",-6.0
+Alg2 Basis LMMSE E95,ds30_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 6004712903261.365, ""effective_rank"": 4.656313421061663, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",-6.0
+Alg2 Basis LMMSE E99,ds30_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 6020979474557.117, ""effective_rank"": 4.980125406923935, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",-6.0
+Alg2 CoherenceBlock Bc0.9,ds30_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 3.4857149864592136, ""cond_number"": 5.221511189288461, ""n_blocks"": 7}",-6.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-6.0
+Alg1 Direct RMMSE WB 576sc,ds30_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-4.0
+Alg2 Basis LMMSE E90,ds30_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 6002204092074.051, ""effective_rank"": 4.257352577093582, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",-4.0
+Alg2 Basis LMMSE E95,ds30_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 6004712903261.365, ""effective_rank"": 4.656313421061663, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",-4.0
+Alg2 Basis LMMSE E99,ds30_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 6020979474557.117, ""effective_rank"": 4.980125406923935, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",-4.0
+Alg2 CoherenceBlock Bc0.9,ds30_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 3.4857149864592136, ""cond_number"": 5.221511189288461, ""n_blocks"": 7}",-4.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-4.0
+Alg1 Direct RMMSE WB 576sc,ds30_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-2.0
+Alg2 Basis LMMSE E90,ds30_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 6002204092074.051, ""effective_rank"": 4.257352577093582, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",-2.0
+Alg2 Basis LMMSE E95,ds30_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 6004712903261.365, ""effective_rank"": 4.656313421061663, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",-2.0
+Alg2 Basis LMMSE E99,ds30_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 6020979474557.117, ""effective_rank"": 4.980125406923935, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",-2.0
+Alg2 CoherenceBlock Bc0.9,ds30_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 3.4857149864592136, ""cond_number"": 5.221511189288461, ""n_blocks"": 7}",-2.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-2.0
+Alg1 Direct RMMSE WB 576sc,ds30_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",0.0
+Alg2 Basis LMMSE E90,ds30_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 6002204092074.051, ""effective_rank"": 4.257352577093582, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",0.0
+Alg2 Basis LMMSE E95,ds30_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 6004712903261.365, ""effective_rank"": 4.656313421061663, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",0.0
+Alg2 Basis LMMSE E99,ds30_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 6020979474557.117, ""effective_rank"": 4.980125406923935, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",0.0
+Alg2 CoherenceBlock Bc0.9,ds30_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 3.4857149864592136, ""cond_number"": 5.221511189288461, ""n_blocks"": 7}",0.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",0.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",0.0
+Alg1 Direct RMMSE WB 576sc,ds30_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",2.0
+Alg2 Basis LMMSE E90,ds30_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 6002204092074.051, ""effective_rank"": 4.257352577093582, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",2.0
+Alg2 Basis LMMSE E95,ds30_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 6004712903261.365, ""effective_rank"": 4.656313421061663, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",2.0
+Alg2 Basis LMMSE E99,ds30_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 6020979474557.117, ""effective_rank"": 4.980125406923935, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",2.0
+Alg2 CoherenceBlock Bc0.9,ds30_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 3.4857149864592136, ""cond_number"": 5.221511189288461, ""n_blocks"": 7}",2.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",2.0
+Alg1 Direct RMMSE WB 576sc,ds30_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",4.0
+Alg2 Basis LMMSE E90,ds30_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 6002204092074.051, ""effective_rank"": 4.257352577093582, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",4.0
+Alg2 Basis LMMSE E95,ds30_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 6004712903261.365, ""effective_rank"": 4.656313421061663, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",4.0
+Alg2 Basis LMMSE E99,ds30_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 6020979474557.117, ""effective_rank"": 4.980125406923935, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",4.0
+Alg2 CoherenceBlock Bc0.9,ds30_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 3.4857149864592136, ""cond_number"": 5.221511189288461, ""n_blocks"": 7}",4.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",4.0
+Alg1 Direct RMMSE WB 576sc,ds30_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",6.0
+Alg2 Basis LMMSE E90,ds30_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 6002204092074.051, ""effective_rank"": 4.257352577093582, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",6.0
+Alg2 Basis LMMSE E95,ds30_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 6004712903261.365, ""effective_rank"": 4.656313421061663, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",6.0
+Alg2 Basis LMMSE E99,ds30_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 6020979474557.117, ""effective_rank"": 4.980125406923935, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",6.0
+Alg2 CoherenceBlock Bc0.9,ds30_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 3.4857149864592136, ""cond_number"": 5.221511189288461, ""n_blocks"": 7}",6.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",6.0
+Alg1 Direct RMMSE WB 576sc,ds30_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",8.0
+Alg2 Basis LMMSE E90,ds30_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 6002204092074.051, ""effective_rank"": 4.257352577093582, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",8.0
+Alg2 Basis LMMSE E95,ds30_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 6004712903261.365, ""effective_rank"": 4.656313421061663, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",8.0
+Alg2 Basis LMMSE E99,ds30_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 6020979474557.117, ""effective_rank"": 4.980125406923935, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",8.0
+Alg2 CoherenceBlock Bc0.9,ds30_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 3.4857149864592136, ""cond_number"": 5.221511189288461, ""n_blocks"": 7}",8.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",8.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",8.0
+Alg1 Direct RMMSE WB 576sc,ds30_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-6.0
+Alg2 Basis LMMSE E90,ds30_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 16543646540.404442, ""effective_rank"": 4.449887610507725, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",-6.0
+Alg2 Basis LMMSE E95,ds30_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 5970689187408.663, ""effective_rank"": 5.000630523128774, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",-6.0
+Alg2 Basis LMMSE E99,ds30_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 5972582325109.997, ""effective_rank"": 5.601128675217133, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",-6.0
+Alg2 CoherenceBlock Bc0.9,ds30_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.6717374969812766, ""cond_number"": 2.556256865553344, ""n_blocks"": 7}",-6.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-6.0
+Alg1 Direct RMMSE WB 576sc,ds30_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-4.0
+Alg2 Basis LMMSE E90,ds30_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 16543646540.404442, ""effective_rank"": 4.449887610507725, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",-4.0
+Alg2 Basis LMMSE E95,ds30_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 5970689187408.663, ""effective_rank"": 5.000630523128774, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",-4.0
+Alg2 Basis LMMSE E99,ds30_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 5972582325109.997, ""effective_rank"": 5.601128675217133, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",-4.0
+Alg2 CoherenceBlock Bc0.9,ds30_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.6717374969812766, ""cond_number"": 2.556256865553344, ""n_blocks"": 7}",-4.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-4.0
+Alg1 Direct RMMSE WB 576sc,ds30_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-2.0
+Alg2 Basis LMMSE E90,ds30_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 16543646540.404442, ""effective_rank"": 4.449887610507725, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",-2.0
+Alg2 Basis LMMSE E95,ds30_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 5970689187408.663, ""effective_rank"": 5.000630523128774, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",-2.0
+Alg2 Basis LMMSE E99,ds30_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 5972582325109.997, ""effective_rank"": 5.601128675217133, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",-2.0
+Alg2 CoherenceBlock Bc0.9,ds30_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.6717374969812766, ""cond_number"": 2.556256865553344, ""n_blocks"": 7}",-2.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-2.0
+Alg1 Direct RMMSE WB 576sc,ds30_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",0.0
+Alg2 Basis LMMSE E90,ds30_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 16543646540.404442, ""effective_rank"": 4.449887610507725, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",0.0
+Alg2 Basis LMMSE E95,ds30_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 5970689187408.663, ""effective_rank"": 5.000630523128774, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",0.0
+Alg2 Basis LMMSE E99,ds30_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 5972582325109.997, ""effective_rank"": 5.601128675217133, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",0.0
+Alg2 CoherenceBlock Bc0.9,ds30_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.6717374969812766, ""cond_number"": 2.556256865553344, ""n_blocks"": 7}",0.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",0.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",0.0
+Alg1 Direct RMMSE WB 576sc,ds30_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",2.0
+Alg2 Basis LMMSE E90,ds30_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 16543646540.404442, ""effective_rank"": 4.449887610507725, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",2.0
+Alg2 Basis LMMSE E95,ds30_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 5970689187408.663, ""effective_rank"": 5.000630523128774, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",2.0
+Alg2 Basis LMMSE E99,ds30_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 5972582325109.997, ""effective_rank"": 5.601128675217133, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",2.0
+Alg2 CoherenceBlock Bc0.9,ds30_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.6717374969812766, ""cond_number"": 2.556256865553344, ""n_blocks"": 7}",2.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",2.0
+Alg1 Direct RMMSE WB 576sc,ds30_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",4.0
+Alg2 Basis LMMSE E90,ds30_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 16543646540.404442, ""effective_rank"": 4.449887610507725, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",4.0
+Alg2 Basis LMMSE E95,ds30_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 5970689187408.663, ""effective_rank"": 5.000630523128774, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",4.0
+Alg2 Basis LMMSE E99,ds30_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 5972582325109.997, ""effective_rank"": 5.601128675217133, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",4.0
+Alg2 CoherenceBlock Bc0.9,ds30_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.6717374969812766, ""cond_number"": 2.556256865553344, ""n_blocks"": 7}",4.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",4.0
+Alg1 Direct RMMSE WB 576sc,ds30_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",6.0
+Alg2 Basis LMMSE E90,ds30_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 16543646540.404442, ""effective_rank"": 4.449887610507725, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",6.0
+Alg2 Basis LMMSE E95,ds30_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 5970689187408.663, ""effective_rank"": 5.000630523128774, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",6.0
+Alg2 Basis LMMSE E99,ds30_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 5972582325109.997, ""effective_rank"": 5.601128675217133, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",6.0
+Alg2 CoherenceBlock Bc0.9,ds30_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.6717374969812766, ""cond_number"": 2.556256865553344, ""n_blocks"": 7}",6.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",6.0
+Alg1 Direct RMMSE WB 576sc,ds30_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",8.0
+Alg2 Basis LMMSE E90,ds30_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 16543646540.404442, ""effective_rank"": 4.449887610507725, ""n_unknown_taps"": 18, ""pilot_count"": 96, ""support_len"": 9}",8.0
+Alg2 Basis LMMSE E95,ds30_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 5970689187408.663, ""effective_rank"": 5.000630523128774, ""n_unknown_taps"": 24, ""pilot_count"": 96, ""support_len"": 12}",8.0
+Alg2 Basis LMMSE E99,ds30_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 5972582325109.997, ""effective_rank"": 5.601128675217133, ""n_unknown_taps"": 34, ""pilot_count"": 96, ""support_len"": 17}",8.0
+Alg2 CoherenceBlock Bc0.9,ds30_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.6717374969812766, ""cond_number"": 2.556256865553344, ""n_blocks"": 7}",8.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",8.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",8.0
+Alg1 Direct RMMSE WB 576sc,ds100_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-6.0
+Alg2 Basis LMMSE E90,ds100_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4868504928767.8545, ""effective_rank"": 7.108959292157877, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",-6.0
+Alg2 Basis LMMSE E95,ds100_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4870595285418.248, ""effective_rank"": 7.816231215219115, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",-6.0
+Alg2 Basis LMMSE E99,ds100_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4871019615771.918, ""effective_rank"": 9.06151198283449, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",-6.0
+Alg2 CoherenceBlock Bc0.9,ds100_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 11.202277836656082, ""cond_number"": 12.128787361674808, ""n_blocks"": 23}",-6.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-6.0
+Alg1 Direct RMMSE WB 576sc,ds100_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-4.0
+Alg2 Basis LMMSE E90,ds100_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4868504928767.8545, ""effective_rank"": 7.108959292157877, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",-4.0
+Alg2 Basis LMMSE E95,ds100_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4870595285418.248, ""effective_rank"": 7.816231215219115, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",-4.0
+Alg2 Basis LMMSE E99,ds100_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4871019615771.918, ""effective_rank"": 9.06151198283449, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",-4.0
+Alg2 CoherenceBlock Bc0.9,ds100_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 11.202277836656082, ""cond_number"": 12.128787361674808, ""n_blocks"": 23}",-4.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-4.0
+Alg1 Direct RMMSE WB 576sc,ds100_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-2.0
+Alg2 Basis LMMSE E90,ds100_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4868504928767.8545, ""effective_rank"": 7.108959292157877, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",-2.0
+Alg2 Basis LMMSE E95,ds100_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4870595285418.248, ""effective_rank"": 7.816231215219115, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",-2.0
+Alg2 Basis LMMSE E99,ds100_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4871019615771.918, ""effective_rank"": 9.06151198283449, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",-2.0
+Alg2 CoherenceBlock Bc0.9,ds100_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 11.202277836656082, ""cond_number"": 12.128787361674808, ""n_blocks"": 23}",-2.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-2.0
+Alg1 Direct RMMSE WB 576sc,ds100_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",0.0
+Alg2 Basis LMMSE E90,ds100_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4868504928767.8545, ""effective_rank"": 7.108959292157877, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",0.0
+Alg2 Basis LMMSE E95,ds100_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4870595285418.248, ""effective_rank"": 7.816231215219115, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",0.0
+Alg2 Basis LMMSE E99,ds100_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4871019615771.918, ""effective_rank"": 9.06151198283449, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",0.0
+Alg2 CoherenceBlock Bc0.9,ds100_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 11.202277836656082, ""cond_number"": 12.128787361674808, ""n_blocks"": 23}",0.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",0.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",0.0
+Alg1 Direct RMMSE WB 576sc,ds100_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",2.0
+Alg2 Basis LMMSE E90,ds100_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4868504928767.8545, ""effective_rank"": 7.108959292157877, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",2.0
+Alg2 Basis LMMSE E95,ds100_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4870595285418.248, ""effective_rank"": 7.816231215219115, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",2.0
+Alg2 Basis LMMSE E99,ds100_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4871019615771.918, ""effective_rank"": 9.06151198283449, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",2.0
+Alg2 CoherenceBlock Bc0.9,ds100_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 11.202277836656082, ""cond_number"": 12.128787361674808, ""n_blocks"": 23}",2.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",2.0
+Alg1 Direct RMMSE WB 576sc,ds100_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",4.0
+Alg2 Basis LMMSE E90,ds100_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4868504928767.8545, ""effective_rank"": 7.108959292157877, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",4.0
+Alg2 Basis LMMSE E95,ds100_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4870595285418.248, ""effective_rank"": 7.816231215219115, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",4.0
+Alg2 Basis LMMSE E99,ds100_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4871019615771.918, ""effective_rank"": 9.06151198283449, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",4.0
+Alg2 CoherenceBlock Bc0.9,ds100_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 11.202277836656082, ""cond_number"": 12.128787361674808, ""n_blocks"": 23}",4.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",4.0
+Alg1 Direct RMMSE WB 576sc,ds100_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",6.0
+Alg2 Basis LMMSE E90,ds100_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4868504928767.8545, ""effective_rank"": 7.108959292157877, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",6.0
+Alg2 Basis LMMSE E95,ds100_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4870595285418.248, ""effective_rank"": 7.816231215219115, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",6.0
+Alg2 Basis LMMSE E99,ds100_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4871019615771.918, ""effective_rank"": 9.06151198283449, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",6.0
+Alg2 CoherenceBlock Bc0.9,ds100_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 11.202277836656082, ""cond_number"": 12.128787361674808, ""n_blocks"": 23}",6.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",6.0
+Alg1 Direct RMMSE WB 576sc,ds100_d16_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",8.0
+Alg2 Basis LMMSE E90,ds100_d16_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4868504928767.8545, ""effective_rank"": 7.108959292157877, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",8.0
+Alg2 Basis LMMSE E95,ds100_d16_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4870595285418.248, ""effective_rank"": 7.816231215219115, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",8.0
+Alg2 Basis LMMSE E99,ds100_d16_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4871019615771.918, ""effective_rank"": 9.06151198283449, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",8.0
+Alg2 CoherenceBlock Bc0.9,ds100_d16_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 11.202277836656082, ""cond_number"": 12.128787361674808, ""n_blocks"": 23}",8.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d16_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",8.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d16_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",8.0
+Alg1 Direct RMMSE WB 576sc,ds100_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-6.0
+Alg2 Basis LMMSE E90,ds100_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4290211562820.0415, ""effective_rank"": 9.28308357266004, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",-6.0
+Alg2 Basis LMMSE E95,ds100_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4390804650977.662, ""effective_rank"": 10.004025020014105, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",-6.0
+Alg2 Basis LMMSE E99,ds100_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4430128729269.439, ""effective_rank"": 11.184010801402852, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",-6.0
+Alg2 CoherenceBlock Bc0.9,ds100_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 5.571384758115573, ""cond_number"": 6.0366542891815, ""n_blocks"": 23}",-6.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-6.0
+Alg1 Direct RMMSE WB 576sc,ds100_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-4.0
+Alg2 Basis LMMSE E90,ds100_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4290211562820.0415, ""effective_rank"": 9.28308357266004, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",-4.0
+Alg2 Basis LMMSE E95,ds100_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4390804650977.662, ""effective_rank"": 10.004025020014105, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",-4.0
+Alg2 Basis LMMSE E99,ds100_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4430128729269.439, ""effective_rank"": 11.184010801402852, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",-4.0
+Alg2 CoherenceBlock Bc0.9,ds100_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 5.571384758115573, ""cond_number"": 6.0366542891815, ""n_blocks"": 23}",-4.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-4.0
+Alg1 Direct RMMSE WB 576sc,ds100_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-2.0
+Alg2 Basis LMMSE E90,ds100_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4290211562820.0415, ""effective_rank"": 9.28308357266004, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",-2.0
+Alg2 Basis LMMSE E95,ds100_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4390804650977.662, ""effective_rank"": 10.004025020014105, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",-2.0
+Alg2 Basis LMMSE E99,ds100_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4430128729269.439, ""effective_rank"": 11.184010801402852, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",-2.0
+Alg2 CoherenceBlock Bc0.9,ds100_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 5.571384758115573, ""cond_number"": 6.0366542891815, ""n_blocks"": 23}",-2.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",-2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",-2.0
+Alg1 Direct RMMSE WB 576sc,ds100_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",0.0
+Alg2 Basis LMMSE E90,ds100_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4290211562820.0415, ""effective_rank"": 9.28308357266004, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",0.0
+Alg2 Basis LMMSE E95,ds100_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4390804650977.662, ""effective_rank"": 10.004025020014105, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",0.0
+Alg2 Basis LMMSE E99,ds100_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4430128729269.439, ""effective_rank"": 11.184010801402852, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",0.0
+Alg2 CoherenceBlock Bc0.9,ds100_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 5.571384758115573, ""cond_number"": 6.0366542891815, ""n_blocks"": 23}",0.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",0.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",0.0
+Alg1 Direct RMMSE WB 576sc,ds100_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",2.0
+Alg2 Basis LMMSE E90,ds100_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4290211562820.0415, ""effective_rank"": 9.28308357266004, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",2.0
+Alg2 Basis LMMSE E95,ds100_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4390804650977.662, ""effective_rank"": 10.004025020014105, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",2.0
+Alg2 Basis LMMSE E99,ds100_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4430128729269.439, ""effective_rank"": 11.184010801402852, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",2.0
+Alg2 CoherenceBlock Bc0.9,ds100_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 5.571384758115573, ""cond_number"": 6.0366542891815, ""n_blocks"": 23}",2.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",2.0
+Alg1 Direct RMMSE WB 576sc,ds100_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",4.0
+Alg2 Basis LMMSE E90,ds100_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4290211562820.0415, ""effective_rank"": 9.28308357266004, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",4.0
+Alg2 Basis LMMSE E95,ds100_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4390804650977.662, ""effective_rank"": 10.004025020014105, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",4.0
+Alg2 Basis LMMSE E99,ds100_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4430128729269.439, ""effective_rank"": 11.184010801402852, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",4.0
+Alg2 CoherenceBlock Bc0.9,ds100_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 5.571384758115573, ""cond_number"": 6.0366542891815, ""n_blocks"": 23}",4.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",4.0
+Alg1 Direct RMMSE WB 576sc,ds100_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",6.0
+Alg2 Basis LMMSE E90,ds100_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4290211562820.0415, ""effective_rank"": 9.28308357266004, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",6.0
+Alg2 Basis LMMSE E95,ds100_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4390804650977.662, ""effective_rank"": 10.004025020014105, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",6.0
+Alg2 Basis LMMSE E99,ds100_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4430128729269.439, ""effective_rank"": 11.184010801402852, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",6.0
+Alg2 CoherenceBlock Bc0.9,ds100_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 5.571384758115573, ""cond_number"": 6.0366542891815, ""n_blocks"": 23}",6.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",6.0
+Alg1 Direct RMMSE WB 576sc,ds100_d32_sf6,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 96, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",8.0
+Alg2 Basis LMMSE E90,ds100_d32_sf6,"{""basis_energy_threshold"": 0.9, ""cond_number"": 4290211562820.0415, ""effective_rank"": 9.28308357266004, ""n_unknown_taps"": 58, ""pilot_count"": 96, ""support_len"": 29}",8.0
+Alg2 Basis LMMSE E95,ds100_d32_sf6,"{""basis_energy_threshold"": 0.95, ""cond_number"": 4390804650977.662, ""effective_rank"": 10.004025020014105, ""n_unknown_taps"": 74, ""pilot_count"": 96, ""support_len"": 37}",8.0
+Alg2 Basis LMMSE E99,ds100_d32_sf6,"{""basis_energy_threshold"": 0.99, ""cond_number"": 4430128729269.439, ""effective_rank"": 11.184010801402852, ""n_unknown_taps"": 114, ""pilot_count"": 96, ""support_len"": 57}",8.0
+Alg2 CoherenceBlock Bc0.9,ds100_d32_sf6,"{""bc_threshold"": 0.9, ""block_width_mhz"": 0.78, ""block_width_sc"": 26, ""cond_mean"": 5.571384758115573, ""cond_number"": 6.0366542891815, ""n_blocks"": 23}",8.0
+Alg3 Port-DMRS RMMSE equal-total,ds100_d32_sf6,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 48, ""total_pilot_re_relative"": 1.0}",8.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds100_d32_sf6,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 96, ""total_pilot_re_relative"": 2.0}",8.0
+Alg1 Direct RMMSE WB 576sc,ds30_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-6.0
+Alg2 Basis LMMSE E90,ds30_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 82487529.70488043, ""effective_rank"": 4.480933434432168, ""n_unknown_taps"": 18, ""pilot_count"": 288, ""support_len"": 9}",-6.0
+Alg2 Basis LMMSE E95,ds30_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 621387433560.6582, ""effective_rank"": 5.0472074438825985, ""n_unknown_taps"": 24, ""pilot_count"": 288, ""support_len"": 12}",-6.0
+Alg2 Basis LMMSE E99,ds30_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 10126399541529.445, ""effective_rank"": 5.678947902668566, ""n_unknown_taps"": 34, ""pilot_count"": 288, ""support_len"": 17}",-6.0
+Alg2 CoherenceBlock Bc0.9,ds30_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.233767246711926, ""cond_number"": 1.2430779026451355, ""n_blocks"": 7}",-6.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",-6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",-6.0
+Alg1 Direct RMMSE WB 576sc,ds30_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-4.0
+Alg2 Basis LMMSE E90,ds30_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 82487529.70488043, ""effective_rank"": 4.480933434432168, ""n_unknown_taps"": 18, ""pilot_count"": 288, ""support_len"": 9}",-4.0
+Alg2 Basis LMMSE E95,ds30_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 621387433560.6582, ""effective_rank"": 5.0472074438825985, ""n_unknown_taps"": 24, ""pilot_count"": 288, ""support_len"": 12}",-4.0
+Alg2 Basis LMMSE E99,ds30_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 10126399541529.445, ""effective_rank"": 5.678947902668566, ""n_unknown_taps"": 34, ""pilot_count"": 288, ""support_len"": 17}",-4.0
+Alg2 CoherenceBlock Bc0.9,ds30_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.233767246711926, ""cond_number"": 1.2430779026451355, ""n_blocks"": 7}",-4.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",-4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",-4.0
+Alg1 Direct RMMSE WB 576sc,ds30_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",-2.0
+Alg2 Basis LMMSE E90,ds30_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 82487529.70488043, ""effective_rank"": 4.480933434432168, ""n_unknown_taps"": 18, ""pilot_count"": 288, ""support_len"": 9}",-2.0
+Alg2 Basis LMMSE E95,ds30_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 621387433560.6582, ""effective_rank"": 5.0472074438825985, ""n_unknown_taps"": 24, ""pilot_count"": 288, ""support_len"": 12}",-2.0
+Alg2 Basis LMMSE E99,ds30_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 10126399541529.445, ""effective_rank"": 5.678947902668566, ""n_unknown_taps"": 34, ""pilot_count"": 288, ""support_len"": 17}",-2.0
+Alg2 CoherenceBlock Bc0.9,ds30_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.233767246711926, ""cond_number"": 1.2430779026451355, ""n_blocks"": 7}",-2.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",-2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",-2.0
+Alg1 Direct RMMSE WB 576sc,ds30_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",0.0
+Alg2 Basis LMMSE E90,ds30_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 82487529.70488043, ""effective_rank"": 4.480933434432168, ""n_unknown_taps"": 18, ""pilot_count"": 288, ""support_len"": 9}",0.0
+Alg2 Basis LMMSE E95,ds30_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 621387433560.6582, ""effective_rank"": 5.0472074438825985, ""n_unknown_taps"": 24, ""pilot_count"": 288, ""support_len"": 12}",0.0
+Alg2 Basis LMMSE E99,ds30_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 10126399541529.445, ""effective_rank"": 5.678947902668566, ""n_unknown_taps"": 34, ""pilot_count"": 288, ""support_len"": 17}",0.0
+Alg2 CoherenceBlock Bc0.9,ds30_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.233767246711926, ""cond_number"": 1.2430779026451355, ""n_blocks"": 7}",0.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",0.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",0.0
+Alg1 Direct RMMSE WB 576sc,ds30_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",2.0
+Alg2 Basis LMMSE E90,ds30_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 82487529.70488043, ""effective_rank"": 4.480933434432168, ""n_unknown_taps"": 18, ""pilot_count"": 288, ""support_len"": 9}",2.0
+Alg2 Basis LMMSE E95,ds30_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 621387433560.6582, ""effective_rank"": 5.0472074438825985, ""n_unknown_taps"": 24, ""pilot_count"": 288, ""support_len"": 12}",2.0
+Alg2 Basis LMMSE E99,ds30_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 10126399541529.445, ""effective_rank"": 5.678947902668566, ""n_unknown_taps"": 34, ""pilot_count"": 288, ""support_len"": 17}",2.0
+Alg2 CoherenceBlock Bc0.9,ds30_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.233767246711926, ""cond_number"": 1.2430779026451355, ""n_blocks"": 7}",2.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",2.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",2.0
+Alg1 Direct RMMSE WB 576sc,ds30_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",4.0
+Alg2 Basis LMMSE E90,ds30_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 82487529.70488043, ""effective_rank"": 4.480933434432168, ""n_unknown_taps"": 18, ""pilot_count"": 288, ""support_len"": 9}",4.0
+Alg2 Basis LMMSE E95,ds30_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 621387433560.6582, ""effective_rank"": 5.0472074438825985, ""n_unknown_taps"": 24, ""pilot_count"": 288, ""support_len"": 12}",4.0
+Alg2 Basis LMMSE E99,ds30_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 10126399541529.445, ""effective_rank"": 5.678947902668566, ""n_unknown_taps"": 34, ""pilot_count"": 288, ""support_len"": 17}",4.0
+Alg2 CoherenceBlock Bc0.9,ds30_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.233767246711926, ""cond_number"": 1.2430779026451355, ""n_blocks"": 7}",4.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",4.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",4.0
+Alg1 Direct RMMSE WB 576sc,ds30_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",6.0
+Alg2 Basis LMMSE E90,ds30_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 82487529.70488043, ""effective_rank"": 4.480933434432168, ""n_unknown_taps"": 18, ""pilot_count"": 288, ""support_len"": 9}",6.0
+Alg2 Basis LMMSE E95,ds30_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 621387433560.6582, ""effective_rank"": 5.0472074438825985, ""n_unknown_taps"": 24, ""pilot_count"": 288, ""support_len"": 12}",6.0
+Alg2 Basis LMMSE E99,ds30_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 10126399541529.445, ""effective_rank"": 5.678947902668566, ""n_unknown_taps"": 34, ""pilot_count"": 288, ""support_len"": 17}",6.0
+Alg2 CoherenceBlock Bc0.9,ds30_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.233767246711926, ""cond_number"": 1.2430779026451355, ""n_blocks"": 7}",6.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",6.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",6.0
+Alg1 Direct RMMSE WB 576sc,ds30_d64_sf2,"{""covariance"": ""CDD-shifted PDP"", ""pilot_count"": 288, ""processing_bandwidth_rb"": 48.0, ""processing_bandwidth_sc"": 576}",8.0
+Alg2 Basis LMMSE E90,ds30_d64_sf2,"{""basis_energy_threshold"": 0.9, ""cond_number"": 82487529.70488043, ""effective_rank"": 4.480933434432168, ""n_unknown_taps"": 18, ""pilot_count"": 288, ""support_len"": 9}",8.0
+Alg2 Basis LMMSE E95,ds30_d64_sf2,"{""basis_energy_threshold"": 0.95, ""cond_number"": 621387433560.6582, ""effective_rank"": 5.0472074438825985, ""n_unknown_taps"": 24, ""pilot_count"": 288, ""support_len"": 12}",8.0
+Alg2 Basis LMMSE E99,ds30_d64_sf2,"{""basis_energy_threshold"": 0.99, ""cond_number"": 10126399541529.445, ""effective_rank"": 5.678947902668566, ""n_unknown_taps"": 34, ""pilot_count"": 288, ""support_len"": 17}",8.0
+Alg2 CoherenceBlock Bc0.9,ds30_d64_sf2,"{""bc_threshold"": 0.9, ""block_width_mhz"": 2.61, ""block_width_sc"": 87, ""cond_mean"": 1.233767246711926, ""cond_number"": 1.2430779026451355, ""n_blocks"": 7}",8.0
+Alg3 Port-DMRS RMMSE equal-total,ds30_d64_sf2,"{""overhead_mode"": ""equal_total_overhead"", ""pilot_count_per_port"": 144, ""total_pilot_re_relative"": 1.0}",8.0
+Alg3 Port-DMRS RMMSE equal-per-port,ds30_d64_sf2,"{""overhead_mode"": ""equal_per_port_density"", ""pilot_count_per_port"": 288, ""total_pilot_re_relative"": 2.0}",8.0

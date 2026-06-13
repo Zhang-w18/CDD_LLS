@@ -1,0 +1,9 @@
+{
+  "snr_db": [
+    -6.0,
+    -4.0
+  ],
+  "trials": 2,
+  "seed": 20260611,
+  "note": "NMSE-only channel-estimation comparison; no LDPC encoding/decoding is run."
+}

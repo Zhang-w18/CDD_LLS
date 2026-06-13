@@ -1,0 +1,75 @@
+antenna:
+  n_tx: 2
+  n_rx: 4
+
+resource:
+  carrier_bandwidth_mhz: 100
+  scs_khz: 30
+  n_fft: 4096
+  n_prbs: 48
+  pdsch_n_symbols: 10
+  dmrs_symbol_indices: [2, 7]
+  dmrs_spacing_sc: 4
+  prg_size_rb: 4
+
+channel:
+  model: tdl
+  delay_spread_ns: 30
+  max_delay_factor: 8
+
+transmission:
+  tx_scheme: CDD
+  cdd_delay_vector: null
+  cdd_base_delay: 8
+
+mcs:
+  table: nr_256qam
+  index: 8
+
+receiver:
+  max_ldpc_iterations: 20
+
+simulation:
+  snr_range_db: [-2, 14, 2]
+  n_trials_per_snr: 20
+  max_trials_per_snr: 100
+  min_block_errors: 10
+  output_dir: outputs/recon_vs_rmmse
+  seed: 123
+  bler_target: 0.10
+
+scenarios:
+  - scenario_id: ds10
+    channel:
+      delay_spread_ns: 10
+  - scenario_id: ds30
+    channel:
+      delay_spread_ns: 30
+  - scenario_id: ds100
+    channel:
+      delay_spread_ns: 100
+  - scenario_id: ds300
+    channel:
+      delay_spread_ns: 300
+
+variants:
+  - variant_id: rmmse_wb_known
+    channel_estimation:
+      ce_method: RMMSE_WB_KNOWN
+  - variant_id: recon_pairwise
+    channel_estimation:
+      ce_method: RECON_PAIRWISE
+      recon_pair_spacing_pilots: 1
+      recon_regularization: 0.001
+  - variant_id: recon_basis_lmmse
+    channel_estimation:
+      ce_method: RECON_BASIS_LMMSE
+      basis_support: truncated
+      basis_energy_threshold: 0.99
+  - variant_id: ideal_csi
+    channel_estimation:
+      ce_method: IDEAL_CSI
+
+sweeps:
+  cdd_base_delays: [4, 8, 16]
+  dmrs_spacing_sc: [2, 4, 6]

@@ -1,0 +1,13 @@
+cdd_delay_vector,ce_method,delay_spread_ns,dmrs_spacing_sc,pdsch_rb,scenario_id,snr_at_target_bler_db,snr_gain_vs_prg_db,target_bler,tx_scheme,variant_id
+"0,16",RMMSE_WB_KNOWN,30.0,6,48,fig10_static_ds30,4.274434637027422,nan,0.1,CDD,direct_rmmse_wb_d16
+"0,32",RMMSE_WB_KNOWN,30.0,6,48,fig10_static_ds30,4.274434637027422,nan,0.1,CDD,direct_rmmse_wb_d32
+"0,16",RECON_BASIS_LMMSE,30.0,6,48,fig10_static_ds30,4.274434637027422,nan,0.1,CDD,structural_basis_d16
+"0,32",RECON_BASIS_LMMSE,30.0,6,48,fig10_static_ds30,4.274434637027422,nan,0.1,CDD,structural_basis_d32
+"0,16",IDEAL_CSI,30.0,6,48,fig10_static_ds30,4.274434637027422,nan,0.1,CDD,ideal_csi_d16
+"0,32",IDEAL_CSI,30.0,6,48,fig10_static_ds30,4.274434637027422,nan,0.1,CDD,ideal_csi_d32
+"0,16",RMMSE_WB_KNOWN,100.0,6,48,fig10_static_ds100,6.0,nan,0.1,CDD,direct_rmmse_wb_d16
+"0,32",RMMSE_WB_KNOWN,100.0,6,48,fig10_static_ds100,4.182385495472259,nan,0.1,CDD,direct_rmmse_wb_d32
+"0,16",RECON_BASIS_LMMSE,100.0,6,48,fig10_static_ds100,6.0,nan,0.1,CDD,structural_basis_d16
+"0,32",RECON_BASIS_LMMSE,100.0,6,48,fig10_static_ds100,4.182385495472259,nan,0.1,CDD,structural_basis_d32
+"0,16",IDEAL_CSI,100.0,6,48,fig10_static_ds100,4.182385495472259,nan,0.1,CDD,ideal_csi_d16
+"0,32",IDEAL_CSI,100.0,6,48,fig10_static_ds100,4.0,nan,0.1,CDD,ideal_csi_d32

@@ -1,0 +1,4 @@
+cdd_delay_vector,ce_method,delay_spread_ns,dmrs_spacing_sc,pdsch_rb,scenario_id,snr_at_target_bler_db,snr_gain_vs_prg_db,target_bler,tx_scheme,variant_id
+"0,16",RMMSE_WB_KNOWN,30.0,6,48,fig10_static_ds30_d16,4.182385495472259,nan,0.1,CDD,direct_rmmse_wb
+"0,16",RECON_BASIS_LMMSE,30.0,6,48,fig10_static_ds30_d16,4.182385495472259,nan,0.1,CDD,structural_basis
+"0,16",IDEAL_CSI,30.0,6,48,fig10_static_ds30_d16,4.182385495472259,nan,0.1,CDD,ideal_csi

@@ -1,0 +1,91 @@
+antenna:
+  n_tx: 2
+  n_rx: 4
+
+resource:
+  carrier_bandwidth_mhz: 100
+  scs_khz: 30
+  n_fft: 4096
+  n_prbs: 8
+  pdsch_n_symbols: 10
+  dmrs_symbol_indices: [2, 7]
+  dmrs_spacing_sc: 6
+  prg_size_rb: 4
+
+channel:
+  model: tdl
+  delay_spread_ns: 30
+  max_delay_factor: 8
+
+mcs:
+  table: nr_256qam
+  index: 8
+
+receiver:
+  max_ldpc_iterations: 20
+
+simulation:
+  snr_range_db: [-4, 14, 2]
+  n_trials_per_snr: 20
+  max_trials_per_snr: 100
+  min_block_errors: 10
+  output_dir: outputs/qc_static_tdl
+  seed: 42
+  bler_target: 0.10
+
+scenarios:
+  - scenario_id: tdl30_8rb
+    channel:
+      delay_spread_ns: 30
+    resource:
+      n_prbs: 8
+  - scenario_id: tdl100_8rb
+    channel:
+      delay_spread_ns: 100
+    resource:
+      n_prbs: 8
+  - scenario_id: tdl30_48rb
+    channel:
+      delay_spread_ns: 30
+    resource:
+      n_prbs: 48
+  - scenario_id: tdl100_48rb
+    channel:
+      delay_spread_ns: 100
+    resource:
+      n_prbs: 48
+
+variants:
+  - variant_id: prg_rmmse_4rb
+    transmission:
+      tx_scheme: PRG_CYCLING_4RB
+    channel_estimation:
+      ce_method: PRG_RMMSE_4RB
+  - variant_id: cdd_rmmse_4rb_known
+    transmission:
+      tx_scheme: CDD
+      cdd_delay_vector: null
+      cdd_base_delay: 8
+    channel_estimation:
+      ce_method: RMMSE_4RB_KNOWN
+  - variant_id: cdd_rmmse_wb_known
+    transmission:
+      tx_scheme: CDD
+      cdd_delay_vector: null
+      cdd_base_delay: 8
+    channel_estimation:
+      ce_method: RMMSE_WB_KNOWN
+  - variant_id: cdd_rmmse_wb_unknown
+    transmission:
+      tx_scheme: CDD
+      cdd_delay_vector: null
+      cdd_base_delay: 8
+    channel_estimation:
+      ce_method: RMMSE_WB_UNKNOWN
+  - variant_id: cdd_ideal_csi
+    transmission:
+      tx_scheme: CDD
+      cdd_delay_vector: null
+      cdd_base_delay: 8
+    channel_estimation:
+      ce_method: IDEAL_CSI

@@ -1,0 +1,84 @@
+antenna:
+  n_tx: 2
+  n_rx: 4
+resource:
+  carrier_bandwidth_mhz: 100.0
+  scs_khz: 30
+  n_fft: 1024
+  n_prbs: 2
+  pdsch_n_symbols: 6
+  dmrs_symbol_indices:
+  - 1
+  - 4
+  dmrs_spacing_sc: 2
+  dmrs_offset_sc: 0
+  prg_size_rb: 1
+channel:
+  model: tdl
+  delay_spread_ns: 30
+  pdp: exponential
+  max_delay_factor: 4
+  normalize: true
+transmission:
+  tx_scheme: CDD
+  cdd_delay_vector:
+  - 0
+  - 4
+  cdd_base_delay: 8
+  prg_codebook: qpsk_dft
+  prg_cycling_order: null
+channel_estimation:
+  ce_method: RMMSE_WB_KNOWN
+  rmmse_bundle_rb: 1
+  diagonal_loading: 1.0e-08
+  recon_pair_spacing_pilots: 1
+  recon_regularization: 0.001
+  basis_support: truncated
+  basis_energy_threshold: 0.99
+  cond_warning_threshold: 1000.0
+receiver:
+  equalizer: zf_mrc
+  max_ldpc_iterations: 4
+  llr_clip: 50.0
+mcs:
+  table: nr_256qam
+  index: 5
+  qm: null
+  code_rate: null
+simulation:
+  snr_range_db:
+  - 2
+  - 2
+  - 1
+  n_trials_per_snr: 1
+  min_block_errors: 0
+  max_trials_per_snr: 1
+  seed: 9
+  output_dir: outputs/smoke_variants
+  bler_target: 0.1
+  save_trial_metrics: false
+sweeps:
+  cdd_base_delays: []
+  dmrs_spacing_sc: []
+plots:
+  enabled: false
+variants:
+- variant_id: prg
+  transmission:
+    tx_scheme: PRG_CYCLING_4RB
+  channel_estimation:
+    ce_method: PRG_RMMSE_4RB
+- variant_id: ideal
+  channel_estimation:
+    ce_method: IDEAL_CSI
+- variant_id: rmmse
+  channel_estimation:
+    ce_method: RMMSE_WB_KNOWN
+- variant_id: pairwise
+  channel_estimation:
+    ce_method: RECON_PAIRWISE
+    recon_pair_spacing_pilots: 1
+- variant_id: basis
+  channel_estimation:
+    ce_method: RECON_BASIS_LMMSE
+scenarios: []
