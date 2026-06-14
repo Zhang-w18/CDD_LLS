@@ -1398,3 +1398,1332 @@ docs/figures/experiment11_delay_error_sensitivity.png
 4. 在 `tdl100_d32_sf6_snr8` 中，算法一对 delay error 几乎不敏感，而算法三从 `2.009e-02` 上升到 `1.104e+00`。这说明当底层信道本身已经频率选择性较强时，算法一的 covariance mismatch 影响有限；但算法三的 CDD phase synthesis error 仍然是直接误差源。
 
 当前结论：算法三的增益依赖准确的 CDD delay signaling；如果 delay 有 sample-level 误差，算法三可能比算法一更脆弱。算法一在 matched delay 下很强，在 delay mismatch 下通常比算法三稳健；算法二对 delay 误差也敏感，但当前实现中它的表现多与算法一接近或略差。
+
+---
+
+## 12. 算法二 local-window deterministic CDD-aware estimator targeted search
+
+### 12.1 实验目的
+
+本实验专门检查用户提出的算法二局部窗口版本：
+
+```text
+local-window deterministic CDD-aware estimator
+```
+
+该算法不是把全带所有 pilot 拼成一个大矩阵，而是在局部频域窗口内联合多个 CDD-combined pilot，利用已知 CDD phase 解耦底层 physical branch channel，再重构数据 RE 上的 CDD equivalent channel。
+
+本实验要验证的核心判断是：
+
+1. 窗口不能太宽，否则底层 physical channel 在窗口内不再近似常数；
+2. 窗口不能太窄，否则 CDD phase 在 pilot 上变化不足，局部解耦矩阵条件数差；
+3. 若底层物理信道相干带宽很大，而 CDD delay 足够大，则可能存在一个可用窗口，使算法二局部解耦优于 QC Direct equivalent-channel RMMSE。
+
+### 12.2 实现方式
+
+本实验新增脚本：
+
+```text
+tools/search_local_window_alg2.py
+```
+
+对每个局部窗口 \(\mathcal K_b\)，假设窗口内每个 Tx/effective port 的底层信道为常数：
+
+\[
+H_{r,m}[k]\approx h_{r,m}^{(b)},\quad k\in\mathcal K_b.
+\]
+
+窗口内的 CDD-combined pilot observation 写为：
+
+\[
+\tilde{\mathbf g}_{r,\mathcal P_b}
+=
+\mathbf A_b\mathbf h_r^{(b)}
++\mathbf n_{r,b},
+\]
+
+其中
+
+\[
+[\mathbf A_b]_{p,m}
+=
+\frac{1}{\sqrt{N_t}}
+e^{-j2\pi p d_m/N_{\mathrm{FFT}}},
+\quad p\in\mathcal P_b.
+\]
+
+估计器使用 ridge / LMMSE 形式：
+
+\[
+\hat{\mathbf h}_r^{(b)}
+=
+\mathbf A_b^H
+\left(
+\mathbf A_b\mathbf A_b^H+
+\sigma_{\mathrm{LS}}^2\mathbf I+\lambda\mathbf I
+\right)^{-1}
+\tilde{\mathbf g}_{r,\mathcal P_b}.
+\]
+
+然后在窗口内所有目标子载波重构：
+
+\[
+\hat g_r[k]
+=
+\frac{1}{\sqrt{N_t}}
+\sum_m
+\hat h_{r,m}^{(b)}
+e^{-j2\pi k d_m/N_{\mathrm{FFT}}}.
+\]
+
+每个窗口输出：
+
+- `window_sc`：窗口宽度；
+- `min_pilots_per_window` / `bad_window_fraction`：窗口内 pilot 是否足够做 2Tx 解耦；
+- `cond_mean` / `cond_max`：局部 \(\mathbf A_b\) 条件数；
+- `rho_h_at_window_edge`：底层信道在窗口边缘的相关系数，反映 flatness；
+- `gain_vs_alg1_db`：相对 matched Direct RMMSE 的 equivalent-channel NMSE gain。
+
+### 12.3 运行命令与输出
+
+运行命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/search_local_window_alg2.py \
+  --trials 80 \
+  --delay-spreads-ns 1,3,5,10,30,100 \
+  --cdd-delays 32,64,128,256,512 \
+  --dmrs-spacings 4,6,12,24 \
+  --snrs=-6,0,8 \
+  --windows-sc 12,18,24,36,48,72,96,144,192,288,576 \
+  --out outputs/local_window_alg2_search \
+  --fig-dir docs/figures
+```
+
+输出目录：
+
+```text
+outputs/local_window_alg2_search/local_window_20260614_121620/
+```
+
+输出文件：
+
+```text
+outputs/local_window_alg2_search/local_window_20260614_121620/local_window_nmse_search.csv
+outputs/local_window_alg2_search/local_window_20260614_121620/local_window_wins.csv
+docs/figures/experiment12_local_window_best_gains.png
+docs/figures/experiment12_local_window_tradeoff.png
+```
+
+搜索范围：
+
+| 参数 | 取值 |
+|---|---|
+| Delay spread | 1, 3, 5, 10, 30, 100 ns |
+| CDD delay | 32, 64, 128, 256, 512 samples |
+| DMRS spacing | 4, 6, 12, 24 sc |
+| SNR | -6, 0, 8 dB |
+| Window width | 12, 18, 24, 36, 48, 72, 96, 144, 192, 288, 576 sc |
+| Trials | 每点 80 |
+| PDSCH bandwidth | 48 RB = 576 sc |
+| Alg1 baseline | matched Direct RMMSE，使用 CDD-shifted PDP/covariance |
+
+### 12.4 总体结果
+
+总计：
+
+| 项目 | 数值 |
+|---|---:|
+| Alg2 local-window rows | 3960 |
+| 严格局部窗口 rows，\(W<576\) | 3600 |
+| 有效严格局部窗口 rows，所有 window 至少 2 pilots | 3060 |
+| `gain_vs_alg1_db > 0`，包含 \(W=576\) | 14 |
+| `gain_vs_alg1_db > 0`，严格 \(W<576\) | 0 |
+| `gain_vs_alg1_db > 0`，有效严格 \(W<576\) | 0 |
+
+也就是说，本轮 targeted search **没有找到严格局部窗口算法二超过 matched Direct RMMSE 的场景**。包含 \(W=576\) 的 14 个正增益点最大只有 \(9.6\times10^{-5}\) dB，且 \(W=576\) 已经是全 allocation，不符合“不做全带”的 local-window 定义；这些微小正值可视为 Monte Carlo 数值噪声。
+
+严格局部窗口中最接近 Alg1 的有效点如下：
+
+| DS ns | CDD d | DMRS sp | SNR | W | Gain vs Alg1 | Local NMSE | `cond_mean` | `rho_h(edge)` | min pilots/window |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 512 | 24 | 8 | 288 | -0.013 dB | 5.134e-01 | 3.08e14 | 1.000 | 12 |
+| 3 | 512 | 24 | 8 | 288 | -0.013 dB | 4.982e-01 | 3.08e14 | 0.993 | 12 |
+| 5 | 512 | 24 | 8 | 288 | -0.031 dB | 5.073e-01 | 3.08e14 | 0.972 | 12 |
+| 10 | 512 | 24 | 8 | 144 | -0.061 dB | 4.962e-01 | 4.15e14 | 0.968 | 6 |
+| 30 | 512 | 24 | 8 | 72 | -0.177 dB | 5.192e-01 | 1.14e15 | 0.929 | 3 |
+| 100 | 512 | 24 | 8 | 48 | -0.581 dB | 5.967e-01 | 2.11e15 | 0.749 | 2 |
+
+图中只画严格局部窗口 \(W<576\)。可以看到所有柱子都在 0 dB 以下。
+
+![Experiment 12 local-window best gains](figures/experiment12_local_window_best_gains.png)
+
+### 12.5 窗口 tradeoff 观察
+
+下图展示代表性 case 中 window width 对 NMSE gain 的影响；竖线标出底层信道 \(B_{c,H}(0.9)\) 和 \(B_{c,H}(0.5)\)。
+
+![Experiment 12 local-window tradeoff](figures/experiment12_local_window_tradeoff.png)
+
+代表性数值如下。
+
+| Case | Alg1 NMSE | Best local W | Best local NMSE | Gain | 解释 |
+|---|---:|---:|---:|---:|---|
+| DS=1 ns, d=64, sf=24, SNR=8 | 7.803e-03 | 288 | 1.558e-02 | -3.004 dB | 底层极平坦、局部矩阵条件数好，但局部窗口只用部分 pilots，噪声平均不足；全带 \(W=576\) 才与 Alg1 打平 |
+| DS=1 ns, d=512, sf=24, SNR=8 | 5.119e-01 | 288 | 5.134e-01 | -0.013 dB | CDD 后相干带宽极小，Alg1 已很差；local 几乎打平，但 pilot 相位发生 alias，条件数约 \(3.08e14\) |
+| DS=30 ns, d=512, sf=24, SNR=8 | 4.985e-01 | 72 | 5.192e-01 | -0.177 dB | \(W=48\sim72\) 接近 \(B_{c,H}(0.9)\)，平坦性和窗口宽度折中最好，但仍未超过 Alg1 |
+| DS=100 ns, d=32, sf=24, SNR=-6 | 4.572e-01 | 96 | 6.105e-01 | -1.256 dB | 条件数低，`cond_mean=1.39`，但 `rho_h(edge)=0.488`，底层信道已不平坦 |
+
+### 12.6 是否支持用户提出的现象
+
+本实验对用户直觉的支持是**机制层面支持，性能结论上暂不支持**。
+
+支持的部分：
+
+1. 窗口确实存在两类相反约束。太窄时很多窗口只有 1 个 pilot，`bad_window_fraction` 变大，\(\mathbf A_b\) 不可辨识；太宽时 `rho_h_at_window_edge` 降低，底层信道常数假设破坏。
+2. 在 DS=30 ns、d=512、sf=24 的 case 中，最佳 local window 出现在 \(W=48\sim72\) 附近，正好接近 \(B_{c,H}(0.9)\)，超过该范围后 NMSE 逐渐变差。这支持“窗口需要落在底层相干带宽内”的判断。
+3. 当 CDD delay 很大、DMRS 很稀疏时，Direct RMMSE 的 NMSE 确实会很高，例如 DS=1 ns、d=512、sf=24、SNR=8 时 Alg1 NMSE 约为 0.512。
+
+不支持的部分：
+
+1. 严格局部窗口 \(W<576\) 没有出现正 NMSE gain。即使底层平坦、CDD 后相干带宽很小，local-window 算法二也只是接近 Alg1，而没有超过。
+2. 条件数好并不保证 NMSE 好。例如 DS=1 ns、d=64、sf=24、SNR=8 时，\(W=192\) 的 `cond_mean=1.0` 且底层几乎完全平坦，但 local NMSE 仍比 Alg1 差 4.8 dB，因为它只使用 8 个 pilot，而 Alg1 使用全带 24 个 pilot 并做 matched LMMSE。
+3. “CDD 相位跨度大”还不够，还必须避免 pilot 采样下的 phase alias。DS=1 ns、d=512、sf=24 时，连续窗口内相位跨度很大，但 pilot 间相位步进为
+
+\[
+\frac{2\pi d S_f}{N_{\mathrm{FFT}}}
+=
+\frac{2\pi\cdot512\cdot24}{4096}
+=6\pi,
+\]
+
+在 pilot 位置上等价于 \(0\) mod \(2\pi\)，所以局部矩阵列几乎共线，`cond_mean` 达到 \(10^{14}\) 量级。
+
+### 12.7 当前结论
+
+目前实验不支持“算法二 local-window deterministic CDD-aware estimator 在 matched Direct RMMSE baseline 下能稳定获得 NMSE 增益”。
+
+更准确的结论是：
+
+1. 用户提出的窗口存在性条件是正确的，但还需要增加第三个条件：pilot 位置上的 CDD phase samples 必须具有足够 diversity，不能因 \(dS_f/N_{\mathrm{FFT}}\) 的整数或近整数关系发生 alias。
+2. matched Alg1 已经使用真实 CDD-shifted covariance，并使用全带所有 pilot；对于估计同一个 \(g[k]\) 的线性 MMSE 问题，它非常接近最优。因此从同一组 CDD-combined pilot observation 出发，算法二 local-window 很难系统性超过它。
+3. local-window 算法二的最佳点往往是“接近打平但不赢”：平坦底层信道 + 极大 CDD delay + 稀疏 DMRS 时可接近 Alg1，但条件数或 pilot 数限制阻止它超过。
+4. 若希望算法二出现明显收益，下一步更有希望的方向不是继续只调窗口，而是改变 observation 设计，例如多个 DMRS symbol 使用不同 known CDD/port phase probing，或引入 partial port-orthogonal DMRS；或者把 Alg1 baseline 改为 realistic mismatched covariance / unknown CDD delay 场景。
+
+---
+
+## 13. 算法二-only：频域预编码矩阵设计是否优于 CDD
+
+### 13.1 实验目的
+
+本实验只看算法二，不比较算法一/三，不跑 LDPC。目标是验证一个新的判断：
+
+> CDD 只是 deterministic frequency-domain precoder 的一个线性相位特例。如果允许设计不依赖瞬时信道的频域分集预编码矩阵，是否可以优化算法二的局部 sensing matrix 条件数，从而得到比 CDD 更低的信道估计 NMSE？
+
+本实验把 CDD 从
+
+\[
+c_m^{\mathrm{CDD}}[k]
+=
+\frac{1}{\sqrt{N_t}}
+e^{-j2\pi k d_m/N_{\mathrm{FFT}}}
+\]
+
+推广到一般已知频域预编码：
+
+\[
+g_r[k]
+=
+\sum_m c_m[k]H_{r,m}[k].
+\]
+
+2Tx 时写成：
+
+\[
+\mathbf c[k]
+=
+\frac{1}{\sqrt2}[1,z[k]]^T,\quad |z[k]|=1.
+\]
+
+算法二 local-window estimator 在窗口 \(\mathcal K_b\) 内使用：
+
+\[
+[\mathbf A_b]_{p,m}=c_m[p],
+\quad p\in\mathcal P_b.
+\]
+
+因此预编码设计目标可以写成：
+
+\[
+\min_{\{z[k]\}}
+\max_b
+\kappa(\mathbf A_b),
+\]
+
+同时保持 \(z[k]\) 不依赖瞬时信道，只作为频域分集/预编码 cycling pattern。
+
+### 13.2 实现方式
+
+新增脚本：
+
+```text
+tools/search_precoder_design_alg2.py
+```
+
+该脚本固定底层 TDL 信道、DMRS pattern、local-window 算法二和总 pilot 开销，只改变频域预编码矩阵 \(\mathbf c[k]\)。每个 trial 中所有 precoder 使用同一个底层 \(H_{r,m}[k]\) 和同一个 pilot noise realization，以降低比较方差。
+
+比较的 precoder：
+
+| Precoder | 说明 |
+|---|---|
+| `CDD d=64/128/256/512` | CDD 线性相位基线，best CDD 从这些 delay 中选 NMSE 最低者 |
+| `Pilot ALT +/-` | pilot index 上交替 \(z[p]=+1,-1\)，data 上按最近 pilot bin 延拓 |
+| `Pilot QPSK cycle` | pilot index 上循环 \(1,j,-1,-j\) |
+| `RB QPSK cycle` | 每 RB 循环 QPSK precoder |
+| `PRG4RB QPSK cycle` | 每 4 RB 循环 QPSK precoder，类似频域 PRG precoder cycling |
+| `OPT-QPSK pilots W=...` | 对每个窗口宽度离线随机搜索 QPSK pilot phase，目标最小化 window 内 `cond_max` |
+| `CONST z=1` | sanity check，rank-1，不作为频域分集方案解读 |
+
+评价指标：
+
+\[
+G_{\mathrm{vsCDD}}[\mathrm{dB}]
+=
+10\log_{10}
+\frac{
+\mathrm{NMSE}_{\mathrm{best\ CDD}}
+}{
+\mathrm{NMSE}_{\mathrm{candidate}}
+}.
+\]
+
+正值表示该 deterministic frequency precoder 在同一 setting 下比最好的 CDD delay 更好。
+
+### 13.3 运行命令与输出
+
+运行命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/search_precoder_design_alg2.py \
+  --trials 80 \
+  --delay-spreads-ns 1,5,30,100 \
+  --dmrs-spacings 6,12,24 \
+  --snrs=-6,0,8 \
+  --windows-sc 48,72,96,144,192,288 \
+  --cdd-delays 64,128,256,512 \
+  --opt-candidates 200 \
+  --out outputs/precoder_design_alg2 \
+  --fig-dir docs/figures
+```
+
+输出目录：
+
+```text
+outputs/precoder_design_alg2/precoder_design_20260614_141655/
+```
+
+输出文件：
+
+```text
+outputs/precoder_design_alg2/precoder_design_20260614_141655/precoder_design_alg2_nmse.csv
+outputs/precoder_design_alg2/precoder_design_20260614_141655/precoder_design_alg2_wins.csv
+docs/figures/experiment13_precoder_design_best_gains.png
+docs/figures/experiment13_precoder_design_family_summary.png
+```
+
+### 13.4 总体结果
+
+总计：
+
+| 项目 | 数值 |
+|---|---:|
+| 全部 rows | 2160 |
+| 非 CDD、非 constant rows | 1080 |
+| 非 CDD 设计优于 best CDD 的 rows | 450 |
+
+按 precoder 汇总：
+
+| Precoder | Points | Wins vs best CDD | Mean gain | Median gain | Max gain |
+|---|---:|---:|---:|---:|---:|
+| `PRG4RB QPSK cycle` | 216 | 182 | +0.862 dB | +0.668 dB | +3.628 dB |
+| `Pilot QPSK cycle` | 216 | 85 | -0.009 dB | -0.026 dB | +1.339 dB |
+| `Pilot ALT +/-` | 216 | 63 | -0.089 dB | -0.038 dB | +0.891 dB |
+| `RB QPSK cycle` | 216 | 55 | -0.073 dB | -0.036 dB | +0.235 dB |
+| `OPT-QPSK pilots` | 216 | 65 | -0.078 dB | -0.037 dB | +0.891 dB |
+
+最强的 gain 基本都来自 `PRG4RB QPSK cycle`：
+
+![Experiment 13 precoder design best gains](figures/experiment13_precoder_design_best_gains.png)
+
+不同 precoder 在全部 setting 上的分布：
+
+![Experiment 13 precoder design family summary](figures/experiment13_precoder_design_family_summary.png)
+
+### 13.5 Top gain 点
+
+| Precoder | DS ns | DMRS sp | W | SNR | Candidate NMSE | Best CDD | Best CDD NMSE | Gain |
+|---|---:|---:|---:|---:|---:|---|---:|---:|
+| `PRG4RB QPSK cycle` | 30 | 6 | 96 | 8 | 2.123e-02 | `CDD d=128` | 4.896e-02 | +3.63 dB |
+| `PRG4RB QPSK cycle` | 30 | 6 | 144 | 8 | 3.887e-02 | `CDD d=64` | 8.687e-02 | +3.49 dB |
+| `PRG4RB QPSK cycle` | 100 | 6 | 96 | 8 | 1.160e-01 | `CDD d=64` | 2.528e-01 | +3.38 dB |
+| `PRG4RB QPSK cycle` | 30 | 12 | 144 | 8 | 4.350e-02 | `CDD d=64` | 8.897e-02 | +3.11 dB |
+| `PRG4RB QPSK cycle` | 100 | 12 | 96 | 8 | 1.298e-01 | `CDD d=64` | 2.606e-01 | +3.03 dB |
+
+这些 top 点中，`PRG4RB QPSK cycle` 的局部矩阵条件数并不差：
+
+- \(W=96\) 时窗口覆盖两个 4RB PRG，`cond_mean≈2.41`；
+- \(W=144\) 时窗口覆盖三个 4RB PRG，`cond_mean≈1.41`；
+- \(W=192\) 时窗口覆盖四个 QPSK 状态，`cond_mean≈1.0`。
+
+因此这些 gain 不是来自病态矩阵的偶然数值，而是来自更好的 pilot sensing matrix 和更适合 local-window 假设的频域预编码尺度。
+
+### 13.6 解读
+
+本实验支持用户提出的方向：**如果不局限于 CDD 线性相位，而是允许设计 deterministic frequency-domain precoder，算法二的信道估计 NMSE 可以比 CDD 更好。**
+
+原因如下：
+
+1. CDD 的 \(z[k]=e^{-j2\pi kd/N}\) 由一个 delay 参数决定，pilot 上的相位样本可能相隔太小、太大或发生 alias，导致 local-window sensing matrix 病态。
+2. QPSK/PRG cycling 可以直接控制窗口内出现的 precoder 状态，使 \(\sum_{p\in\mathcal P_b}z[p]\) 更接近 0，从而降低 \(\kappa(\mathbf A_b)\)。
+3. `PRG4RB QPSK cycle` 的频域尺度与 local window 更匹配：窗口内能看到多个不同 precoder 状态，同时每个状态又保持若干 RB，不会像逐 pilot random phase 那样在数据频域上过快跳变。
+4. 只优化 pilot 条件数的 `OPT-QPSK pilots` 并没有超过简单 `PRG4RB QPSK cycle`。这说明设计目标不能只看 \(\kappa(\mathbf A_b)\)，还要考虑 data subcarrier 上的 precoder 平滑性、窗口内底层信道 flatness、以及 estimator reconstruct \(g[k]\) 的一致性。
+
+### 13.7 Caveats
+
+1. 本节 13.1 到 13.8 的第一版结果只比较算法二的 NMSE，不包含 BLER/LDPC；13.9 追加了算法一 CDD direct RMMSE baseline。
+2. `CONST z=1` 虽然在某些 equivalent-channel NMSE 上可能很好，但它没有频域分集，也不能恢复 branch channel，因此只作为 sanity check，不作为候选方案。
+3. 当 `PRG4RB QPSK cycle` 的 local window 太窄，例如 \(W=48\) 且窗口刚好只覆盖一个 PRG，\(\mathbf A_b\) rank deficient，不能做 physical branch reconstruction；若要恢复 branch channel，应使用 \(W\ge96\) 或让窗口覆盖至少两个不同 precoder states。
+4. 当前 `PRG4RB QPSK cycle` 是非常简单的手工设计。下一步可以把设计目标改为多目标优化：
+
+\[
+\min_{\{z[k]\}}
+\alpha\max_b\kappa(\mathbf A_b)
++\beta\cdot\mathrm{flatness\ error}
++\eta\cdot\mathrm{precoder\ transition\ penalty},
+\]
+
+其中 transition penalty 用来避免预编码在数据子载波上跳变过快。
+
+### 13.8 当前结论
+
+相对于 CDD，频域 precoder cycling 确实为算法二提供了更大的设计自由度。初步 NMSE-only 结果显示，`PRG4RB QPSK cycle` 在多数 setting 下优于 best CDD delay，median gain 约 0.67 dB，最大 gain 约 3.63 dB。
+
+这说明后续值得把算法二从“CDD-aware reconstruction”推广为：
+
+```text
+deterministic frequency-precoder-aware physical-channel reconstruction
+```
+
+CDD 是其中一个线性相位实例，而更一般的 QPSK/DFT/codebook cycling precoder 可以通过优化 pilot sensing matrix 条件数，提高算法二的估计稳定性。
+
+### 13.9 追加对比：优化预编码 + 算法二 vs CDD + 算法一
+
+用户进一步要求加入算法一 baseline，用来判断：
+
+> 在优化 deterministic frequency precoder 改善算法二观测矩阵之后，算法二是否能超过 CDD 预编码下的算法一 Direct RMMSE？
+
+因此脚本 `tools/search_precoder_design_alg2.py` 已更新。它现在同时输出：
+
+```text
+outputs/precoder_design_alg2/precoder_design_20260614_144938/precoder_design_alg2_nmse.csv
+outputs/precoder_design_alg2/precoder_design_20260614_144938/precoder_design_alg1_cdd_baselines.csv
+outputs/precoder_design_alg2/precoder_design_20260614_144938/precoder_design_alg2_wins.csv
+```
+
+其中：
+
+- `precoder_design_alg2_nmse.csv`：所有 “precoder + Alg2 local-window” 的 NMSE；
+- `precoder_design_alg1_cdd_baselines.csv`：CDD precoder 下 Alg1 direct RMMSE 的 NMSE；
+- `precoder_design_alg2_wins.csv`：仍表示 “Alg2 optimized precoder” 相对 “Alg2 best CDD” 的 winner；
+- 若存在 “Alg2 optimized precoder” 超过 “Alg1 best CDD” 的点，脚本会生成 `precoder_design_alg2_wins_vs_alg1_cdd.csv`。本次没有生成该文件，因为没有正增益点。
+
+新增指标：
+
+\[
+G_{\mathrm{vsAlg1CDD}}[\mathrm{dB}]
+=
+10\log_{10}
+\frac{
+\mathrm{NMSE}_{\mathrm{best\ Alg1\ CDD}}
+}{
+\mathrm{NMSE}_{\mathrm{candidate\ Alg2}}
+}.
+\]
+
+若该值为正，说明优化预编码下的算法二超过了 CDD 下的算法一。
+
+#### 13.9.1 总体结果
+
+| 项目 | 数值 |
+|---|---:|
+| 非 CDD optimized Alg2 rows | 1080 |
+| 相对 Alg2 best CDD 的正增益点 | 450 |
+| 相对 Alg1 best CDD 的正增益点 | 0 |
+| 最接近 Alg1 CDD 的 optimized Alg2 点 | -0.788 dB |
+
+也就是说：
+
+> 优化 deterministic frequency precoder 可以明显改善算法二，并使算法二超过 CDD+算法二；但在本轮实验条件下，它仍未超过 CDD+算法一 matched Direct RMMSE。
+
+新增图如下。第一张是每个 setting 中 optimized Alg2 相对 best Alg1 CDD 的最高若干点；全部仍低于 0 dB。
+
+![Experiment 13 precoder design gain vs Alg1 CDD](figures/experiment13_precoder_design_gain_vs_alg1_cdd.png)
+
+第二张给出不同 precoder family 相对 best Alg1 CDD 的分布。
+
+![Experiment 13 precoder design family vs Alg1 CDD](figures/experiment13_precoder_design_family_vs_alg1_cdd.png)
+
+#### 13.9.2 最接近 Alg1 CDD 的点
+
+| Precoder | DS ns | DMRS sp | W | SNR | Candidate Alg2 NMSE | Best Alg1 CDD | Alg1 NMSE | Gain vs Alg1 |
+|---|---:|---:|---:|---:|---:|---|---:|---:|
+| `PRG4RB QPSK cycle` | 100 | 24 | 144 | -6 | 5.632e-01 | `CDD d=256` | 4.698e-01 | -0.788 dB |
+| `PRG4RB QPSK cycle` | 100 | 24 | 96 | -6 | 5.905e-01 | `CDD d=256` | 4.826e-01 | -0.875 dB |
+| `PRG4RB QPSK cycle` | 100 | 24 | 48 | -6 | 6.177e-01 | `CDD d=256` | 4.952e-01 | -0.959 dB |
+| `PRG4RB QPSK cycle` | 100 | 24 | 72 | -6 | 6.008e-01 | `CDD d=512` | 4.720e-01 | -1.048 dB |
+| `PRG4RB QPSK cycle` | 100 | 12 | 96 | -6 | 4.140e-01 | `CDD d=256` | 3.235e-01 | -1.072 dB |
+
+按 precoder 汇总，相对 best Alg1 CDD：
+
+| Precoder | Points | Wins | Mean gain | Median gain | Max gain |
+|---|---:|---:|---:|---:|---:|
+| `PRG4RB QPSK cycle` | 216 | 0 | -4.534 dB | -4.172 dB | -0.788 dB |
+| `Pilot QPSK cycle` | 216 | 0 | -5.406 dB | -4.859 dB | -1.243 dB |
+| `Pilot ALT +/-` | 216 | 0 | -5.486 dB | -4.891 dB | -1.562 dB |
+| `RB QPSK cycle` | 216 | 0 | -5.469 dB | -4.877 dB | -1.634 dB |
+| `OPT-QPSK pilots` | 216 | 0 | -5.475 dB 左右 | -4 dB 到 -6 dB 量级 | -1.391 dB 到 -1.859 dB |
+
+#### 13.9.3 解读
+
+这次新增比较说明两件事：
+
+1. **优化预编码确实改善了算法二本身。**
+   `PRG4RB QPSK cycle` 相对 CDD+算法二的 median gain 约 +0.67 dB，最大 +3.63 dB。
+
+2. **但 matched Alg1 CDD 仍然更强。**
+   算法一在 CDD 下使用 matched CDD-shifted PDP/covariance，并做全带 direct LMMSE；它利用的是完整二阶统计信息，而 local-window 算法二仍有 piecewise-constant branch approximation error 和窗口内 pilot 数限制。
+
+因此当前更准确的结论是：
+
+- 若比较对象是 **CDD+算法二**，优化频域预编码明显有价值；
+- 若比较对象是 **CDD+算法一 matched Direct RMMSE**，本轮还没有看到 optimized precoder+算法二 超越它；
+- 若要进一步挑战算法一，应把算法一也扩展到 optimized general precoder 下的 full-covariance Direct RMMSE，作为更严格 baseline。
+
+### 13.10 一般性预编码下还能不能做算法一 MMSE？
+
+可以做，但 covariance 形式会从 CDD 的 stationary / shifted-PDP 形式，变成一般的 full covariance matrix。
+
+设一般 deterministic precoder 为
+
+\[
+g[k]=\sum_m c_m[k]H_m[k].
+\]
+
+则等效信道 covariance 是
+
+\[
+R_g(k,k')
+=
+\mathbb E[g[k]g^*[k']]
+=
+\sum_{m,n}c_m[k]c_n^*[k']R_{mn}(k,k').
+\]
+
+若各 Tx branch 独立同分布：
+
+\[
+R_{mn}(k,k')=\delta_{mn}R_H(k-k'),
+\]
+
+则
+
+\[
+R_g(k,k')
+=
+R_H(k-k')\sum_m c_m[k]c_m^*[k'].
+\]
+
+2Tx 相对相位形式
+
+\[
+\mathbf c[k]=\frac{1}{\sqrt2}[1,z[k]]^T
+\]
+
+对应
+
+\[
+R_g(k,k')
+=
+R_H(k-k')\,
+\frac{1+z[k]z^*[k']}{2}.
+\]
+
+这里需要注意最后一式是乘法关系，含义是 \(R_H(k-k')\) 乘以 precoder inner product；在实现时应写成：
+
+```text
+R_g[k,k'] = R_H[k-k'] * (1 + z[k] * conj(z[k'])) / 2
+```
+
+因此结论是：
+
+1. 一般性预编码下，算法一仍然可以使用；
+2. covariance 不是不可求，只要 UE 知道 deterministic precoder pattern 和底层 PDP / branch covariance；
+3. 但它不再是只依赖 \(\Delta k\) 的 Toeplitz covariance，不能简单用 CDD-shifted PDP 表示；
+4. 需要显式构造 \(\mathbf R_{g,\mathcal P\mathcal P}\) 和 \(\mathbf R_{g,\mathcal D\mathcal P}\) full matrix；
+5. 这会带来更高预计算和存储复杂度，但在 48 RB、\(N_P=96\) 这种规模下是可行的。
+
+---
+
+## 14. 算法一-only：优化 deterministic frequency precoder 是否降低 Direct RMMSE CE NMSE
+
+### 14.1 实验目的
+
+本实验回答用户进一步提出的问题：
+
+> 对于算法一 Direct RMMSE，如果优化 deterministic frequency-domain precoder，相比 CDD 预编码，信道估计 NMSE 能否下降？
+
+与实验 13 不同，本实验只看算法一。对 CDD 和非 CDD precoder，都使用 matched full-covariance RMMSE：
+
+\[
+\hat{\mathbf g}_{\mathcal D}
+=
+\mathbf R_{g,\mathcal D\mathcal P}
+\left(
+\mathbf R_{g,\mathcal P\mathcal P}
++\sigma_{\mathrm{LS}}^2\mathbf I
+\right)^{-1}
+\tilde{\mathbf g}_{\mathcal P}.
+\]
+
+对一般 precoder：
+
+\[
+R_g(k,k')
+=
+R_H(k-k')\sum_m c_m[k]c_m^*[k'].
+\]
+
+因此每个候选 precoder 都使用自己的 full covariance，而不是把非 CDD precoder 强行套进 CDD-shifted PDP。
+
+### 14.2 实现方式
+
+新增脚本：
+
+```text
+tools/search_precoder_design_alg1.py
+```
+
+候选 precoder：
+
+| Precoder | 说明 |
+|---|---|
+| `CDD d=64/128/256/512` | CDD baseline，每个 setting 取 NMSE 最低者作为 best CDD |
+| `Pilot ALT +/-` | pilot-bin 交替相位 |
+| `Pilot QPSK cycle` | pilot-bin QPSK 循环 |
+| `RB1/2/4/8/12 QPSK cycle` | 每 1/2/4/8/12 RB 切换一次 QPSK precoder |
+| `CONST z=1` | sanity check，无频域 precoder variation，不作为频域分集方案 |
+
+评价指标：
+
+\[
+G_{\mathrm{Alg1,vsCDD}}[\mathrm{dB}]
+=
+10\log_{10}
+\frac{
+\mathrm{NMSE}_{\mathrm{best\ CDD}}
+}{
+\mathrm{NMSE}_{\mathrm{candidate}}
+}.
+\]
+
+### 14.3 运行命令与输出
+
+运行命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/search_precoder_design_alg1.py \
+  --trials 80 \
+  --delay-spreads-ns 1,5,30,100 \
+  --dmrs-spacings 6,12,24 \
+  --snrs=-6,0,8 \
+  --cdd-delays 64,128,256,512 \
+  --rb-groups 1,2,4,8,12 \
+  --out outputs/precoder_design_alg1 \
+  --fig-dir docs/figures
+```
+
+输出目录：
+
+```text
+outputs/precoder_design_alg1/alg1_precoder_design_20260614_175115/
+```
+
+输出文件：
+
+```text
+outputs/precoder_design_alg1/alg1_precoder_design_20260614_175115/alg1_precoder_design_nmse.csv
+outputs/precoder_design_alg1/alg1_precoder_design_20260614_175115/alg1_precoder_design_wins.csv
+docs/figures/experiment14_alg1_precoder_design_best_gains.png
+docs/figures/experiment14_alg1_precoder_design_family_summary.png
+```
+
+### 14.4 总体结果
+
+| 项目 | 数值 |
+|---|---:|
+| 非 CDD / 非 constant candidate rows | 252 |
+| 非 CDD candidate 优于 best CDD 的 rows | 110 |
+| 最佳非 CDD gain | +1.385 dB |
+| `CONST z=1` 相对 best CDD mean gain | +2.003 dB |
+
+`CONST z=1` 的 CE NMSE 最低并不意外，因为它不做频域 precoder variation，等效信道最平滑；但它没有频域分集，不能作为目标方案。主要看 QPSK/RB cycling。
+
+按 precoder 汇总：
+
+| Precoder | Points | Wins vs best CDD | Mean gain | Median gain | Max gain |
+|---|---:|---:|---:|---:|---:|
+| `RB12 QPSK cycle` | 36 | 29 | +0.575 dB | +0.719 dB | +1.385 dB |
+| `RB8 QPSK cycle` | 36 | 23 | +0.343 dB | +0.373 dB | +1.182 dB |
+| `RB4 QPSK cycle` | 36 | 21 | +0.131 dB | +0.086 dB | +0.684 dB |
+| `RB2 QPSK cycle` | 36 | 12 | -0.035 dB | -0.022 dB | +0.372 dB |
+| `RB1 QPSK cycle` | 36 | 12 | -0.080 dB | -0.068 dB | +0.149 dB |
+| `Pilot ALT +/-` | 36 | 7 | -0.105 dB | -0.060 dB | +0.190 dB |
+| `Pilot QPSK cycle` | 36 | 6 | -0.114 dB | -0.085 dB | +0.041 dB |
+
+![Experiment 14 Alg1 precoder design best gains](figures/experiment14_alg1_precoder_design_best_gains.png)
+
+![Experiment 14 Alg1 precoder design family summary](figures/experiment14_alg1_precoder_design_family_summary.png)
+
+### 14.5 Top gain 点
+
+| Precoder | DS ns | DMRS sp | SNR | Candidate NMSE | Best CDD | Best CDD NMSE | Gain |
+|---|---:|---:|---:|---:|---|---:|---:|
+| `RB12 QPSK cycle` | 100 | 6 | 0 | 5.953e-02 | `CDD d=64` | 8.189e-02 | +1.385 dB |
+| `RB12 QPSK cycle` | 100 | 12 | 0 | 9.959e-02 | `CDD d=64` | 1.338e-01 | +1.282 dB |
+| `RB12 QPSK cycle` | 100 | 12 | -6 | 2.532e-01 | `CDD d=64` | 3.374e-01 | +1.246 dB |
+| `RB8 QPSK cycle` | 100 | 6 | 0 | 6.238e-02 | `CDD d=64` | 8.189e-02 | +1.182 dB |
+| `RB12 QPSK cycle` | 100 | 12 | 8 | 2.391e-02 | `CDD d=64` | 3.122e-02 | +1.158 dB |
+
+按 delay spread 看最佳点：
+
+| Delay spread | Best non-CDD precoder | Gain |
+|---:|---|---:|
+| 1 ns | `RB2 QPSK cycle` | +0.21 dB |
+| 5 ns | `RB12 QPSK cycle` | +0.60 dB |
+| 30 ns | `RB12 QPSK cycle` | +1.06 dB |
+| 100 ns | `RB12 QPSK cycle` | +1.38 dB |
+
+### 14.6 解读
+
+本实验支持：**对于算法一，如果使用 matched full-covariance RMMSE，设计 deterministic frequency-domain precoder 可以比 CDD 降低 CE NMSE。**
+
+更具体地说：
+
+1. `RB12 QPSK cycle` 最稳定。它在 48 RB allocation 内每 12 RB 切换一次 QPSK precoder，等效为宽频段内 4 个 precoder states。这个变化比 CDD 大 delay 的线性相位更慢，更容易由稀疏 DMRS 估计。
+2. `RB1/RB2` 或 pilot-level phase cycling 变化太快，虽然能提供更频繁的 precoder 状态切换，但对算法一的 equivalent-channel interpolation 不友好，因此平均 gain 不如 `RB8/RB12`。
+3. 高 delay spread 下收益更明显。DS=100 ns 时 CDD 等效信道本身已经更频选，额外 CDD phase 会进一步压缩相干带宽；慢速 RB-level QPSK cycling 可以保留一定频域 precoder variation，同时不把等效信道做得过快变化。
+4. 如果只看 CE NMSE，`CONST z=1` 最容易估计，平均比 best CDD 好约 2 dB；但它没有频域分集，不应作为候选 frequency-diversity precoder。
+
+当前结论：
+
+- 对算法二：优化预编码能超过 CDD+算法二，但没超过 CDD+算法一；
+- 对算法一：优化预编码也能超过 CDD+算法一，前提是算法一使用对应的一般 full covariance；
+- 因此后续若目标是 CE NMSE + 频域分集的联合优化，应该把 precoder design 和 receiver covariance design 一起做，而不是只优化 CDD delay。
+
+## 15. LDPC BLER: CDD precoder vs non-CDD precoder under Algorithm 1
+
+### 15.1 实验目的
+
+实验14说明，在只看 channel-estimation NMSE 时，`RB12 QPSK cycle` 这种非 CDD deterministic frequency-domain precoder 可以让算法一的 matched full-covariance RMMSE 取得比 CDD 更低的等效信道 NMSE。本实验进一步接入 Sionna LDPC 编解码链路，比较这种 CE NMSE 改善是否可以转化为 transport-block BLER 改善。
+
+对比对象：
+
+| 类别 | Precoder | 接收端信道估计 |
+|---|---|---|
+| CDD baseline | `CDD d=64` | Algorithm 1, matched full-covariance RMMSE |
+| CDD baseline | `CDD d=128` | Algorithm 1, matched full-covariance RMMSE |
+| 非 CDD | `RB12 QPSK cycle` | Algorithm 1, matched full-covariance RMMSE |
+
+三种 precoder 都使用相同 DMRS pattern、相同 DMRS overhead 和相同算法一框架。区别只在已知 deterministic precoder `c[k]` 不同；接收端协方差矩阵均按对应 precoder 精确匹配。
+
+### 15.2 实现方法
+
+运行脚本：
+
+```text
+tools/run_bler_precoder_alg1.py
+```
+
+本次为该脚本补充了三点实现：
+
+1. 支持显式 SNR 列表 `--snrs`，用于按用户指定的离散点运行。
+2. 三种 precoder 在同一个 Monte Carlo trial 内复用同一组物理信道、payload bits、pilot noise 和 data noise，减少随机性带来的不公平比较。
+3. 对同一 TB 的不同 precoder LLR 进行 batch LDPC decode，并且每个 DS/SNR 点完成后写出 `bler_summary_partial.csv`，便于长仿真中途检查。
+
+信道估计算法为算法一：
+
+\[
+\hat{\mathbf g}_{\mathrm{data}}
+=
+\mathbf R_{\mathrm{dp}}
+\left(
+\mathbf R_{\mathrm{pp}}+\sigma_{\mathrm{LS}}^2\mathbf I
+\right)^{-1}
+\hat{\mathbf g}_{\mathrm{pilot}} .
+\]
+
+对于一般 deterministic frequency-domain precoder，本实验使用 matched covariance：
+
+\[
+R_g[k,k']
+=
+R_H[k-k']\cdot
+\sum_{m=0}^{N_{\mathrm{tx}}-1}
+c_m[k]c_m^\ast[k'] .
+\]
+
+对于 2Tx 且
+
+\[
+\mathbf c[k] = \frac{1}{\sqrt{2}}[1,z[k]]^T
+\]
+
+有
+
+\[
+R_g[k,k']
+=
+R_H[k-k']\frac{1+z[k]z^\ast[k']}{2}.
+\]
+
+CDD 是
+
+\[
+z[k]=e^{-j2\pi k d/N_{\mathrm{FFT}}},
+\]
+
+而 `RB12 QPSK cycle` 是每 12 RB 切换一次 \(z[k]\in\{1,j,-1,-j\}\)，在 48 RB allocation 内共 4 个 precoder states。
+
+### 15.3 仿真设置
+
+运行命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/run_bler_precoder_alg1.py \
+  --trials 100 \
+  --delay-spreads-ns 30,100 \
+  --snrs 0,2,4,6,8,10,12,16,20 \
+  --cdd-delays 64,128 \
+  --rb-group 12 \
+  --ldpc-iterations 8 \
+  --out outputs/bler_precoder_alg1 \
+  --fig-dir docs/figures \
+  --progress-every 25
+```
+
+主要参数：
+
+| 参数 | 数值 |
+|---|---:|
+| Tx/Rx | 2Tx / 4Rx |
+| TDL delay spread | 30 ns, 100 ns |
+| SNR points | 0, 2, 4, 6, 8, 10, 12, 16, 20 dB |
+| Trials | 100 per SNR per delay spread |
+| PRB | 48 RB |
+| 子载波数 | 576 |
+| SCS / FFT | 30 kHz / 4096 |
+| PDSCH symbols | 10 |
+| DMRS symbols | 2, symbol indices `[2, 7]` |
+| DMRS spacing | every 6 subcarriers |
+| DMRS overhead | 3.33% |
+| MCS | `nr_256qam`, index 8 |
+| Modulation order | \(Q_m=4\) |
+| Code rate | 0.5400 |
+| TBS / coded bits | 12024 / 22272 bits |
+| Code blocks | 4 |
+| LDPC BP iterations | 8 |
+
+CDD delay 使用 sample-domain delay。当前采样周期为
+
+\[
+T_s=\frac{1}{4096\cdot 30\mathrm{kHz}}\approx 8.138\mathrm{ns}.
+\]
+
+因此：
+
+| CDD delay | 近似时间 |
+|---:|---:|
+| 64 samples | 520.8 ns |
+| 128 samples | 1041.7 ns |
+
+### 15.4 输出文件
+
+输出目录：
+
+```text
+outputs/bler_precoder_alg1/bler_precoder_alg1_20260614_182042/
+```
+
+主要文件：
+
+```text
+outputs/bler_precoder_alg1/bler_precoder_alg1_20260614_182042/bler_summary.csv
+outputs/bler_precoder_alg1/bler_precoder_alg1_20260614_182042/bler_summary_partial.csv
+outputs/bler_precoder_alg1/bler_precoder_alg1_20260614_182042/summary_10pct_bler_snr.csv
+outputs/bler_precoder_alg1/bler_precoder_alg1_20260614_182042/run_config.json
+docs/figures/experiment15_alg1_precoder_bler.png
+docs/figures/experiment15_alg1_precoder_ce_nmse.png
+```
+
+`bler_summary.csv` 中关键列解释：
+
+| 列名 | 含义 |
+|---|---|
+| `delay_spread_ns` | TDL delay spread |
+| `snr_db` | SNR 点 |
+| `precoder` | CDD 或非 CDD precoder |
+| `n_trials` | 当前点 Monte Carlo trials 数 |
+| `tb_errors` | transport block error 个数 |
+| `bler` | `tb_errors / n_trials` |
+| `cb_bler` | code-block BLER |
+| `ce_nmse_eff` | 等效信道 \(g[k]\) 的全带 NMSE |
+| `best_cdd_*` | 同一 DS/SNR 下最优 CDD baseline |
+| `ce_nmse_gain_vs_best_cdd_db` | 相对 best CDD 的 CE NMSE gain |
+| `goodput_bits_per_slot` | 每 slot 成功解码信息 bit 数 |
+
+### 15.5 BLER 结果
+
+![Experiment 15 Algorithm 1 precoder BLER](figures/experiment15_alg1_precoder_bler.png)
+
+图中 0/100 的 BLER 点为了能在 semilog 坐标中显示，被绘图函数放在 \(10^{-4}\) 的下限位置；这不是实测 BLER 为 \(10^{-4}\)，而是表示本次 100 trials 中未观察到 TB error。
+
+Delay spread = 30 ns：
+
+| SNR (dB) | CDD d=64 | CDD d=128 | RB12 QPSK cycle |
+|---:|---:|---:|---:|
+| 0 | 1.00 (100/100) | 1.00 (100/100) | 1.00 (100/100) |
+| 2 | 0.94 (94/100) | 0.93 (93/100) | 0.90 (90/100) |
+| 4 | 0.34 (34/100) | 0.32 (32/100) | 0.34 (34/100) |
+| 6 | 0.00 (0/100) | 0.00 (0/100) | 0.04 (4/100) |
+| 8 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+| 10 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+| 12 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+| 16 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+| 20 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+
+Delay spread = 100 ns：
+
+| SNR (dB) | CDD d=64 | CDD d=128 | RB12 QPSK cycle |
+|---:|---:|---:|---:|
+| 0 | 1.00 (100/100) | 1.00 (100/100) | 1.00 (100/100) |
+| 2 | 0.99 (99/100) | 0.99 (99/100) | 0.95 (95/100) |
+| 4 | 0.42 (42/100) | 0.44 (44/100) | 0.38 (38/100) |
+| 6 | 0.00 (0/100) | 0.00 (0/100) | 0.04 (4/100) |
+| 8 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+| 10 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+| 12 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+| 16 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+| 20 | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+
+10% BLER 插值：
+
+| Delay spread | Precoder | interpolated SNR@10% BLER |
+|---:|---|---:|
+| 30 ns | `CDD d=128` | 4.29 dB |
+| 30 ns | `CDD d=64` | 4.30 dB |
+| 30 ns | `RB12 QPSK cycle` | 5.14 dB |
+| 100 ns | `CDD d=128` | 4.35 dB |
+| 100 ns | `CDD d=64` | 4.34 dB |
+| 100 ns | `RB12 QPSK cycle` | 5.19 dB |
+
+注意：由于 SNR grid 中 4 dB 到 6 dB 的 BLER 跳变很陡，并且每点只有 100 trials，10% BLER 插值对 6 dB 的少量错误很敏感。因此该插值只能作为本轮 Monte Carlo 结果的读数，不应过度外推。
+
+### 15.6 CE NMSE 结果
+
+![Experiment 15 Algorithm 1 precoder CE NMSE](figures/experiment15_alg1_precoder_ce_nmse.png)
+
+Delay spread = 30 ns：
+
+| SNR (dB) | Best CDD NMSE | RB12 NMSE | RB12 gain vs best CDD |
+|---:|---:|---:|---:|
+| 0 | 4.320e-02 | 3.534e-02 | +0.87 dB |
+| 2 | 2.907e-02 | 2.343e-02 | +0.94 dB |
+| 4 | 1.979e-02 | 1.560e-02 | +1.03 dB |
+| 6 | 1.285e-02 | 1.024e-02 | +0.99 dB |
+| 8 | 9.006e-03 | 7.162e-03 | +0.99 dB |
+| 10 | 5.997e-03 | 4.770e-03 | +0.99 dB |
+| 12 | 3.900e-03 | 3.197e-03 | +0.86 dB |
+| 16 | 1.777e-03 | 1.427e-03 | +0.95 dB |
+| 20 | 7.138e-04 | 5.680e-04 | +0.99 dB |
+
+Delay spread = 100 ns：
+
+| SNR (dB) | Best CDD NMSE | RB12 NMSE | RB12 gain vs best CDD |
+|---:|---:|---:|---:|
+| 0 | 8.176e-02 | 6.047e-02 | +1.31 dB |
+| 2 | 5.638e-02 | 4.261e-02 | +1.22 dB |
+| 4 | 3.760e-02 | 2.879e-02 | +1.16 dB |
+| 6 | 2.651e-02 | 2.009e-02 | +1.20 dB |
+| 8 | 1.786e-02 | 1.362e-02 | +1.18 dB |
+| 10 | 1.111e-02 | 8.949e-03 | +0.94 dB |
+| 12 | 7.463e-03 | 5.932e-03 | +1.00 dB |
+| 16 | 3.253e-03 | 2.824e-03 | +0.61 dB |
+| 20 | 1.329e-03 | 1.135e-03 | +0.69 dB |
+
+### 15.7 关键点对比
+
+| Delay spread | SNR | Best CDD BLER | RB12 BLER | Delta | Best CDD NMSE | RB12 NMSE | NMSE gain |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 30 ns | 2 | 0.93 | 0.90 | -0.03 | 2.907e-02 | 2.343e-02 | +0.94 dB |
+| 30 ns | 4 | 0.32 | 0.34 | +0.02 | 1.979e-02 | 1.560e-02 | +1.03 dB |
+| 30 ns | 6 | 0.00 | 0.04 | +0.04 | 1.285e-02 | 1.024e-02 | +0.99 dB |
+| 100 ns | 2 | 0.99 | 0.95 | -0.04 | 5.638e-02 | 4.261e-02 | +1.22 dB |
+| 100 ns | 4 | 0.42 | 0.38 | -0.04 | 3.760e-02 | 2.879e-02 | +1.16 dB |
+| 100 ns | 6 | 0.00 | 0.04 | +0.04 | 2.651e-02 | 2.009e-02 | +1.20 dB |
+
+### 15.8 结果解读
+
+本实验支持两个结论：
+
+1. **在算法一 matched full-covariance RMMSE 下，`RB12 QPSK cycle` 的 CE NMSE 确实稳定低于 CDD。** 两个 delay spread、所有 SNR 点上，RB12 相对 best CDD 的 CE NMSE gain 约为 0.6 到 1.3 dB。
+2. **CE NMSE 改善没有稳定转化为 BLER 改善。** 在 DS=100 ns、2 dB 和 4 dB 处，RB12 BLER 分别比 best CDD 低 0.04；但在 6 dB，RB12 出现 4/100 个 TB error，而 CDD 为 0/100。DS=30 ns 也有类似现象：2 dB 略好，4 dB 基本持平，6 dB 更差。
+
+可能原因：
+
+1. 当前 MCS 和 SNR grid 下 waterfall 很陡，4 dB 到 6 dB 之间 BLER 从约 0.3 到 0.0 附近快速跳变。100 trials 已比之前可靠，但在低 BLER 区域仍不足以精确估计 \(10^{-2}\) 以下 BLER。
+2. `ce_nmse_eff` 是全带平均等效信道 NMSE，而 LDPC BLER 取决于解调后每个 coded bit 的 LLR 分布、深衰落位置、频域 interleaving 和 MRC 后有效 SINR。平均 NMSE 更低不必然意味着最差 RE 或关键 code-bit 的可靠性更好。
+3. 非 CDD `RB12 QPSK cycle` 改变了频域上的有效信道形状。它让 matched RMMSE 更容易估计，但也可能改变数据 RE 上的瞬时等效增益分布。链路层收益需要联合看 CE NMSE、post-equalization SINR 分布和 LDPC waterfall。
+4. CDD 在当前 2Tx/4Rx、MRC equalization 和该 MCS 下可能提供了更有利的频域 diversity/interleaving 行为，即使其 CE NMSE 略高。
+
+当前读数：
+
+- 若只看 CE NMSE，`RB12 QPSK cycle` 优于 CDD；
+- 若看本轮 100 trials/SNR 的 BLER，`RB12 QPSK cycle` 只在 DS=100 ns 的 2 dB/4 dB 明确优于 CDD，在 6 dB 反而差于 CDD；
+- 因此不能直接声称非 CDD precoder 在算法一 LDPC BLER 上全面优于 CDD。更稳妥的说法是：**非 CDD precoder 在 matched RMMSE 下能降低信道估计误差，但 BLER 收益依赖 MCS、SNR 区间和有效 SINR 分布，需要进一步细化仿真。**
+
+建议后续补充：
+
+1. 围绕 waterfall 区间使用更密 SNR：例如 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0 dB。
+2. 在 10% BLER 附近增加到至少 300 到 1000 trials，或者运行到至少 100 TB errors。
+3. 输出 post-equalization SINR CDF、per-RE error contribution 或 LLR variance，检查为什么 RB12 的平均 NMSE 改善没有稳定变成 BLER 改善。
+4. 对 RB group size 做 BLER 搜索，例如 RB4/RB8/RB12，而不仅使用实验14中 NMSE 最优的 RB12。
+
+## 16. CE gain 与频域分集的联合诊断和 precoder 搜索
+
+### 16.1 问题和分析
+
+实验15出现了一个重要现象：
+
+- `RB12 QPSK cycle` 在 Algorithm 1 matched full-covariance RMMSE 下有稳定 CE NMSE gain；
+- 但这个 gain 没有稳定转化成 LDPC BLER gain；
+- 在 6 dB 处，`RB12 QPSK cycle` 甚至出现 4/100 TB error，而 CDD 为 0/100。
+
+这说明 **CE NMSE 不是 BLER 的充分指标**。CE NMSE 是全带平均估计误差：
+
+\[
+\mathrm{NMSE}
+=
+\frac{\sum_k |g[k]-\hat g[k]|^2}{\sum_k |g[k]|^2}.
+\]
+
+BLER 则取决于每个 coded bit 经历的 post-equalization SINR、LLR 分布、深衰落位置、频域 interleaving 和 LDPC decoder waterfall。一个 precoder 可以让 \(g[k]\) 更平滑、更容易估计，但同时减少等效信道的频域分集，使 codeword 内的可靠性分布变差。
+
+因此需要把问题拆成两部分：
+
+1. **估计收益**：Algorithm 1 下 \(\hat g[k]\) 是否更准；
+2. **ideal-CSI 分集收益/损失**：如果接收端知道真实 \(g[k]\)，该 precoder 的等效信道本身是否仍然有足够频域分集。
+
+若某个 precoder 在 ideal CSI 下已经比 CDD 差，则它的 CE NMSE gain 很可能被分集损失抵消；若 ideal CSI 不差但 estimated CSI 差，则问题更可能在 CE/LLR/equalizer mismatch。
+
+本轮实验使用以下诊断量：
+
+等效信道每个子载波的 ideal post-MRC SINR：
+
+\[
+\gamma[k]
+=
+\frac{\|\mathbf g[k]\|^2}{N_0}.
+\]
+
+调制阶数受限的 mutual-information proxy：
+
+\[
+I_{\mathrm{cap}}
+=
+\frac{1}{N_{\mathrm{data}}}
+\sum_{k\in\mathcal D}
+\min\left(\log_2(1+\gamma[k]), Q_m\right).
+\]
+
+与 MCS 需求的 margin：
+
+\[
+\Delta I
+=
+I_{\mathrm{cap}} - Q_m R.
+\]
+
+对 Monte Carlo trials 取 5% 分位：
+
+\[
+\Delta I_{5\%}
+=
+\mathrm{percentile}_{5\%}(\Delta I).
+\]
+
+如果某 precoder 的 \(\Delta I_{5\%}\) 低于 CDD，说明它在 ideal CSI 下的低可靠性 codeword 更差，通常意味着频域分集或有效 SINR 分布变差。
+
+同时计算 \(\gamma[k]\) 的频域相关矩阵 effective rank：
+
+\[
+r_{\mathrm{eff}}
+=
+\frac{\mathrm{tr}(\mathbf R_\gamma)^2}
+{\mathrm{tr}(\mathbf R_\gamma^2)}.
+\]
+
+\(r_{\mathrm{eff}}\) 越高，表示 codeword 里可利用的独立频域 fade 越多。
+
+本实验中之前的 LDPC BLER 使用：
+
+| 参数 | 数值 |
+|---|---:|
+| MCS table | `nr_256qam` |
+| MCS index | 8 |
+| \(Q_m\) | 4 |
+| 实际星座 | 16QAM |
+| Code rate | 0.5400 |
+
+也就是说，虽然 table 名为 `nr_256qam`，但 index 8 实际是 16QAM。高阶星座确实更敏感于 CE error，但是否能把 CE NMSE gain 转换成 BLER gain，仍取决于 ideal-CSI 分集损失是否小于 CE gain。
+
+### 16.2 实验16A：CE-diversity proxy 搜索
+
+目的：在不跑 LDPC 的情况下，快速搜索能同时满足以下条件的 deterministic precoder：
+
+1. Algorithm 1 CE NMSE 低于 CDD；
+2. ideal-CSI capped-MI 低分位不低于 CDD；
+3. \(\gamma[k]\) 的频域相关 effective rank 不明显低于 CDD。
+
+运行脚本：
+
+```text
+tools/search_precoder_diversity_tradeoff.py
+```
+
+候选 family：
+
+| Family | 说明 |
+|---|---|
+| `rb_mpsk_cycling` | RB-level 4PSK/8PSK/16PSK phase cycling |
+| `hybrid_cdd_mpsk` | 小 CDD delay + RB-level MPSK cycling |
+| `power_phase_cycling` | Tx power split 和 phase 同时随 RB cycling |
+| `smooth_phase` | 正弦相位函数 |
+| `smooth_chirp` | 二次相位函数 |
+| `smooth_random_phase` | anchor RB 上随机相位、频域平滑插值 |
+
+运行命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/search_precoder_diversity_tradeoff.py \
+  --trials 120 \
+  --diversity-trials 120 \
+  --delay-spreads-ns 30,100 \
+  --snrs 4,6,12,18 \
+  --mcs-indexes 8,14,20 \
+  --cdd-delays 32,64,128,256 \
+  --baseline-cdd-delays 64,128 \
+  --rb-groups 1,2,4,6,8,12,16,24 \
+  --out outputs/precoder_diversity_tradeoff \
+  --fig-dir docs/figures \
+  --progress-every 30
+```
+
+输出目录：
+
+```text
+outputs/precoder_diversity_tradeoff/precoder_diversity_tradeoff_20260614_190725/
+```
+
+输出文件：
+
+```text
+outputs/precoder_diversity_tradeoff/precoder_diversity_tradeoff_20260614_190725/precoder_diversity_tradeoff.csv
+outputs/precoder_diversity_tradeoff/precoder_diversity_tradeoff_20260614_190725/qualified_precoders.csv
+docs/figures/experiment16_precoder_ce_diversity_tradeoff.png
+docs/figures/experiment16_precoder_family_summary.png
+```
+
+总体结果：
+
+| 指标 | 数值 |
+|---|---:|
+| Total rows | 2592 |
+| Qualified rows | 78 |
+| Candidate designs per DS/SNR | 108 |
+
+筛选条件：
+
+| 条件 | 数值 |
+|---|---:|
+| CE NMSE gain vs best CDD | > 0.3 dB |
+| 5%-tile capped-MI margin loss | < 0.02 bit/RE |
+| \(\gamma[k]\) effective-rank ratio vs best CDD | > 0.9 |
+
+![Experiment 16 CE diversity tradeoff](figures/experiment16_precoder_ce_diversity_tradeoff.png)
+
+![Experiment 16 family summary](figures/experiment16_precoder_family_summary.png)
+
+关键 proxy 对比，MCS8：
+
+| Scenario | Precoder | CE gain | MI p05 delta | rank ratio | corr bw 0.5 |
+|---|---|---:|---:|---:|---:|
+| DS=30, SNR=4 | `RB12 QPSK` | +0.90 dB | -0.111 | 0.61 | 109 |
+| DS=30, SNR=4 | `RB1 16PSK` | +0.70 dB | -0.012 | 0.96 | 47 |
+| DS=30, SNR=4 | `RB2 8PSK` | +0.66 dB | -0.015 | 0.96 | 47 |
+| DS=30, SNR=6 | `RB12 QPSK` | +0.95 dB | -0.161 | 0.58 | 115 |
+| DS=30, SNR=6 | `RB1 16PSK` | +0.77 dB | +0.008 | 0.94 | 47 |
+| DS=30, SNR=6 | `RB2 8PSK` | +0.69 dB | +0.002 | 0.94 | 47 |
+| DS=100, SNR=4 | `RB12 QPSK` | +1.21 dB | -0.115 | 0.49 | 46 |
+| DS=100, SNR=4 | `RB1 16PSK` | +1.06 dB | -0.032 | 0.62 | 35 |
+| DS=100, SNR=4 | `RB1 8PSK` | +0.34 dB | -0.014 | 0.87 | 21 |
+| DS=100, SNR=6 | `RB12 QPSK` | +1.11 dB | -0.054 | 0.45 | 49 |
+| DS=100, SNR=6 | `RB1 8PSK` | +0.36 dB | +0.022 | 0.85 | 22 |
+| DS=100, SNR=6 | `hybrid d=32 + RB12 8PSK` | +0.98 dB | +0.028 | 0.71 | 29 |
+
+解读：
+
+1. `RB12 QPSK` 的 CE gain 最大，但 MI p05 delta 明显为负，effective-rank ratio 也显著低于 CDD。这支持“RB12 QPSK 的频域分集下降抵消 CE gain”的判断。
+2. `RB1 16PSK` 和 `RB2 8PSK` 的 CE gain 略小于 RB12，但 MI p05 损失小得多，effective-rank 更接近 CDD。
+3. DS=100 ns 下很难同时满足高 CE gain 和 high effective rank；这是因为底层信道已经频选，再叠加 precoder variation 后，估计难度和分集形状之间的 tradeoff 更强。
+4. 非 QPSK 的 `8PSK/16PSK` 比 QPSK 更有希望：相位状态更多，可以在较短 RB 周期内提供较细的相位变化，从而避免 RB12 那种长块状等效信道。
+
+### 16.3 实验16B：候选 precoder 的 LDPC BLER 验证
+
+目的：把 proxy 搜索中较有希望的候选放回 bit-level LDPC 链路，检查是否真的改善 BLER。
+
+候选：
+
+| Precoder | 选择原因 |
+|---|---|
+| `CDD d=64/128` | baseline |
+| `RB12 QPSK cycle` | 实验15中 CE NMSE 最好但 BLER 不稳定 |
+| `RB1 16PSK step1` | CE gain 较高，MI p05 损失较小 |
+| `RB1 8PSK step1` | 分集 proxy 较好，CE gain 中等 |
+| `RB2 8PSK step1` | DS=30 下 proxy 和 BLER 预期较好 |
+| `hybrid d=32 + RB12 8PSK` | DS=100/SNR=6 下 MI p05 为正 |
+| `hybrid d=32 + RB4 8PSK` | DS=100/SNR=4 下 MI p05 接近 CDD |
+| `RB2 power[0.25-0.75] 4PSK` | power/phase 联合 cycling 参考 |
+
+运行命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/run_bler_precoder_alg1.py \
+  --trials 100 \
+  --delay-spreads-ns 30,100 \
+  --snrs 2,4,6 \
+  --cdd-delays 64,128 \
+  --rb-group 12 \
+  --candidate-set diversity16 \
+  --ldpc-iterations 8 \
+  --out outputs/bler_precoder_alg1_candidates \
+  --fig-dir docs/figures \
+  --progress-every 25
+```
+
+输出目录：
+
+```text
+outputs/bler_precoder_alg1_candidates/bler_precoder_alg1_20260614_191234/
+```
+
+主要图：
+
+![Experiment 16 candidate BLER focus](figures/experiment16_candidate_precoder_bler_focus.png)
+
+![Experiment 16 candidate CE NMSE focus](figures/experiment16_candidate_precoder_ce_nmse_focus.png)
+
+#### BLER 结果
+
+Delay spread = 30 ns：
+
+| SNR | CDD d=64 | CDD d=128 | RB12 QPSK | RB1 16PSK | RB1 8PSK | RB2 8PSK |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 0.94 (94/100) | 0.93 (93/100) | 0.90 (90/100) | 0.89 (89/100) | 0.92 (92/100) | 0.91 (91/100) |
+| 4 | 0.34 (34/100) | 0.32 (32/100) | 0.34 (34/100) | 0.30 (30/100) | 0.34 (34/100) | 0.29 (29/100) |
+| 6 | 0.00 (0/100) | 0.00 (0/100) | 0.04 (4/100) | 0.00 (0/100) | 0.00 (0/100) | 0.00 (0/100) |
+
+Delay spread = 100 ns：
+
+| SNR | CDD d=64 | CDD d=128 | RB12 QPSK | RB1 16PSK | RB1 8PSK | RB2 8PSK |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 0.99 (99/100) | 0.99 (99/100) | 0.95 (95/100) | 0.97 (97/100) | 0.98 (98/100) | 0.97 (97/100) |
+| 4 | 0.42 (42/100) | 0.44 (44/100) | 0.38 (38/100) | 0.33 (33/100) | 0.34 (34/100) | 0.40 (40/100) |
+| 6 | 0.00 (0/100) | 0.00 (0/100) | 0.04 (4/100) | 0.00 (0/100) | 0.00 (0/100) | 0.01 (1/100) |
+
+#### CE NMSE 结果
+
+Delay spread = 30 ns：
+
+| SNR | CDD d=64 | CDD d=128 | RB12 QPSK | RB1 16PSK | RB1 8PSK | RB2 8PSK |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 2.950e-02 | 2.907e-02 | 2.343e-02 | 2.586e-02 | 2.917e-02 | 2.604e-02 |
+| 4 | 1.979e-02 | 2.022e-02 | 1.560e-02 | 1.704e-02 | 1.934e-02 | 1.720e-02 |
+| 6 | 1.285e-02 | 1.291e-02 | 1.024e-02 | 1.086e-02 | 1.270e-02 | 1.099e-02 |
+
+Delay spread = 100 ns：
+
+| SNR | CDD d=64 | CDD d=128 | RB12 QPSK | RB1 16PSK | RB1 8PSK | RB2 8PSK |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 5.638e-02 | 6.039e-02 | 4.261e-02 | 4.291e-02 | 5.093e-02 | 4.538e-02 |
+| 4 | 3.760e-02 | 4.094e-02 | 2.879e-02 | 2.820e-02 | 3.396e-02 | 3.008e-02 |
+| 6 | 2.651e-02 | 2.935e-02 | 2.009e-02 | 2.116e-02 | 2.472e-02 | 2.255e-02 |
+
+Best per scenario：
+
+| DS | SNR | Best BLER precoder | BLER | Best NMSE precoder | NMSE |
+|---:|---:|---|---:|---|---:|
+| 30 ns | 2 | `RB1 16PSK step1` | 0.89 | `RB12 QPSK cycle` | 2.343e-02 |
+| 30 ns | 4 | `RB2 8PSK step1` | 0.29 | `RB12 QPSK cycle` | 1.560e-02 |
+| 30 ns | 6 | `CDD d=64` / several candidates | 0.00 | `RB12 QPSK cycle` | 1.024e-02 |
+| 100 ns | 2 | `RB12 QPSK cycle` | 0.95 | `RB12 QPSK cycle` | 4.261e-02 |
+| 100 ns | 4 | `RB1 16PSK step1` | 0.33 | `RB1 16PSK step1` | 2.820e-02 |
+| 100 ns | 6 | `CDD d=64` / several candidates | 0.00 | `RB12 QPSK cycle` | 2.009e-02 |
+
+### 16.4 结论
+
+本实验支持以下判断：
+
+1. **实验15中 RB12 QPSK 的 BLER 不稳定，很可能与频域分集下降有关。** Proxy 指标显示 RB12 QPSK 虽然 CE NMSE gain 最大，但 capped-MI 5% 分位明显低于 CDD，\(\gamma[k]\) effective-rank 也大幅下降。
+2. **可以找到比 RB12 QPSK 更平衡的 precoder。** `RB1 16PSK` 和 `RB2 8PSK` 的 CE gain 略小于 RB12，但频域分集 proxy 更接近 CDD；在 LDPC 小规模验证中，它们确实改善了 waterfall 区间 BLER。
+3. **在 DS=100 ns、SNR=4 dB，`RB1 16PSK` 同时优于 CDD 和 RB12 QPSK。** BLER 从 best CDD 的 0.42 降到 0.33，也优于 RB12 QPSK 的 0.38；CE NMSE 也从 best CDD 的 3.760e-02 降到 2.820e-02。
+4. **“CE NMSE 最优”不等价于“BLER 最优”。** DS=30 ns、4 dB 下，RB12 QPSK 的 NMSE 最低，但 BLER=0.34；RB2 8PSK 的 NMSE 稍高，但 BLER=0.29。
+5. **非 QPSK precoder 值得继续研究。** 8PSK/16PSK 在当前结果中比 QPSK 更有希望，因为它们能缩短相位循环周期、提高频域变化粒度，同时不把等效信道变得像大 CDD 那样难估。
+
+当前仍需谨慎：
+
+- 本轮候选 BLER 仍是 100 trials/SNR，不足以精确估计低 BLER 区域；
+- 6 dB 处很多曲线都是 0/100，只能说明未观察到错误；
+- 还没有跑高阶 MCS 的 LDPC BLER。当前 LDPC 结果仍然是 MCS8/16QAM。
+
+下一步建议：
+
+1. 对 `RB1 16PSK`、`RB2 8PSK`、`RB12 QPSK`、`CDD d=64/128` 在 DS=100 ns 附近做更密 SNR sweep：3.0, 3.5, 4.0, 4.5, 5.0 dB。
+2. 每点至少 300 trials，或者跑到 100 TB errors，用于稳定比较 10% BLER SNR。
+3. 对 MCS14/64QAM 和 MCS20/256QAM 做 pre-scan，确认高阶星座下 CE gain 是否更容易转成 BLER gain。
+4. 将目标函数从“最小 CE NMSE”改为联合优化：
+
+\[
+J
+=
+w_1\cdot \mathrm{NMSE}
+-w_2\cdot \Delta I_{5\%}
+-w_3\cdot r_{\mathrm{eff}}
++w_4\cdot \kappa(\mathbf R_{\mathrm{pp}}),
+\]
+
+其中 \(\kappa(\mathbf R_{\mathrm{pp}})\) 是 Algorithm 1 RMMSE pilot covariance 的条件数。
