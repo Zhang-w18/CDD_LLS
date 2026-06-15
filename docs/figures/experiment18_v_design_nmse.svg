@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.00" y="28" font-size="18" font-family="Arial, sans-serif" text-anchor="middle" fill="#111">Alg1 RMMSE NMSE</text>
+<line x1="86" y1="478" x2="872" y2="478" stroke="#333" stroke-width="1.2"/>
+<line x1="86" y1="58" x2="86" y2="478" stroke="#333" stroke-width="1.2"/>
+<line x1="86.00" y1="58" x2="86.00" y2="478" stroke="#e6e8eb" stroke-width="1"/>
+<text x="86.00" y="502" font-size="12" text-anchor="middle" fill="#333">-0.112</text>
+<line x1="243.20" y1="58" x2="243.20" y2="478" stroke="#e6e8eb" stroke-width="1"/>
+<text x="243.20" y="502" font-size="12" text-anchor="middle" fill="#333">-0.0672</text>
+<line x1="400.40" y1="58" x2="400.40" y2="478" stroke="#e6e8eb" stroke-width="1"/>
+<text x="400.40" y="502" font-size="12" text-anchor="middle" fill="#333">-0.0224</text>
+<line x1="557.60" y1="58" x2="557.60" y2="478" stroke="#e6e8eb" stroke-width="1"/>
+<text x="557.60" y="502" font-size="12" text-anchor="middle" fill="#333">0.0224</text>
+<line x1="714.80" y1="58" x2="714.80" y2="478" stroke="#e6e8eb" stroke-width="1"/>
+<text x="714.80" y="502" font-size="12" text-anchor="middle" fill="#333">0.0672</text>
+<line x1="872.00" y1="58" x2="872.00" y2="478" stroke="#e6e8eb" stroke-width="1"/>
+<text x="872.00" y="502" font-size="12" text-anchor="middle" fill="#333">0.112</text>
+<line x1="86" y1="478.00" x2="872" y2="478.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="482.00" font-size="12" text-anchor="end" fill="#333">-2.18</text>
+<line x1="86" y1="394.00" x2="872" y2="394.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="398.00" font-size="12" text-anchor="end" fill="#333">-2.1</text>
+<line x1="86" y1="310.00" x2="872" y2="310.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="314.00" font-size="12" text-anchor="end" fill="#333">-2.01</text>
+<line x1="86" y1="226.00" x2="872" y2="226.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="230.00" font-size="12" text-anchor="end" fill="#333">-1.93</text>
+<line x1="86" y1="142.00" x2="872" y2="142.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="146.00" font-size="12" text-anchor="end" fill="#333">-1.85</text>
+<line x1="86" y1="58.00" x2="872" y2="58.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="62.00" font-size="12" text-anchor="end" fill="#333">-1.76</text>
+<circle cx="479.00" cy="455.50" r="4.40" fill="#ef476f" opacity="0.72"><title>CDD step=3</title></circle>
+<polyline points="479.00,455.50" fill="none" stroke="#ef476f" stroke-width="1.8"/>
+<circle cx="479.00" cy="80.50" r="4.40" fill="#26547c" opacity="0.72"><title>PW reset DFTseg slope=4</title></circle>
+<polyline points="479.00,80.50" fill="none" stroke="#26547c" stroke-width="1.8"/>
+<circle cx="96.00" cy="66.00" r="4.20" fill="#ef476f" opacity="0.72"><title>CDD step=3</title></circle>
+<text x="108" y="70.00" font-size="12" fill="#333">CDD step=3</text>
+<circle cx="406.00" cy="66.00" r="4.20" fill="#26547c" opacity="0.72"><title>PW reset DFTseg slope=4</title></circle>
+<text x="418" y="70.00" font-size="12" fill="#333">PW reset DFTseg slope=4</text>
+<text x="479.00" y="536" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" fill="#111">SNR (dB)</text>
+<text x="20" y="268.00" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" fill="#111" transform="rotate(-90 20 268.00)">log10 Alg1 RMMSE NMSE</text>
+</svg>

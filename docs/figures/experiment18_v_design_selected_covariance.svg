@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
+<rect width="100%" height="100%" fill="white"/>
+<text x="500.00" y="28" font-size="18" font-family="Arial, sans-serif" text-anchor="middle" fill="#111">Selected V-matrix covariance function</text>
+<line x1="86" y1="518" x2="972" y2="518" stroke="#333" stroke-width="1.2"/>
+<line x1="86" y1="58" x2="86" y2="518" stroke="#333" stroke-width="1.2"/>
+<line x1="86.00" y1="58" x2="86.00" y2="518" stroke="#e6e8eb" stroke-width="1"/>
+<text x="86.00" y="542" font-size="12" text-anchor="middle" fill="#333">-1.92</text>
+<line x1="263.20" y1="58" x2="263.20" y2="518" stroke="#e6e8eb" stroke-width="1"/>
+<text x="263.20" y="542" font-size="12" text-anchor="middle" fill="#333">5.25</text>
+<line x1="440.40" y1="58" x2="440.40" y2="518" stroke="#e6e8eb" stroke-width="1"/>
+<text x="440.40" y="542" font-size="12" text-anchor="middle" fill="#333">12.4</text>
+<line x1="617.60" y1="58" x2="617.60" y2="518" stroke="#e6e8eb" stroke-width="1"/>
+<text x="617.60" y="542" font-size="12" text-anchor="middle" fill="#333">19.6</text>
+<line x1="794.80" y1="58" x2="794.80" y2="518" stroke="#e6e8eb" stroke-width="1"/>
+<text x="794.80" y="542" font-size="12" text-anchor="middle" fill="#333">26.8</text>
+<line x1="972.00" y1="58" x2="972.00" y2="518" stroke="#e6e8eb" stroke-width="1"/>
+<text x="972.00" y="542" font-size="12" text-anchor="middle" fill="#333">33.9</text>
+<line x1="86" y1="518.00" x2="972" y2="518.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="522.00" font-size="12" text-anchor="end" fill="#333">0</text>
+<line x1="86" y1="426.00" x2="972" y2="426.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="430.00" font-size="12" text-anchor="end" fill="#333">0.21</text>
+<line x1="86" y1="334.00" x2="972" y2="334.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="338.00" font-size="12" text-anchor="end" fill="#333">0.42</text>
+<line x1="86" y1="242.00" x2="972" y2="242.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="246.00" font-size="12" text-anchor="end" fill="#333">0.63</text>
+<line x1="86" y1="150.00" x2="972" y2="150.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="154.00" font-size="12" text-anchor="end" fill="#333">0.84</text>
+<line x1="86" y1="58.00" x2="972" y2="58.00" stroke="#e6e8eb" stroke-width="1"/>
+<text x="76" y="62.00" font-size="12" text-anchor="end" fill="#333">1.05</text>
+<polyline points="86.00,298.95 972.00,298.95" fill="none" stroke="#111" stroke-width="1.0" stroke-dasharray="5 4"/>
+<polyline points="133.46,79.90 158.19,79.93 182.91,80.00 207.63,80.13 232.35,80.30 257.07,80.52 281.79,80.79 306.51,81.10 331.23,81.47 355.95,81.89 380.67,82.35 405.40,82.86 430.12,83.43 454.84,84.04 479.56,84.69 504.28,85.40 529.00,86.15 553.72,86.95 578.44,87.80 603.16,88.70 627.88,89.64 652.60,90.64 677.33,91.67 702.05,92.76 726.77,93.89 751.49,95.07 776.21,96.29 800.93,97.56 825.65,98.87 850.37,100.23 875.09,101.64 899.81,103.09 924.54,104.58" fill="none" stroke="#ef476f" stroke-width="2.0"/>
+<polyline points="133.46,79.90 158.19,79.93 182.91,80.00 207.63,80.13 232.35,80.30 257.07,80.52 281.79,80.79 306.51,81.10 331.23,81.47 355.95,81.89 380.67,82.35 405.40,82.86 430.12,83.43 454.84,84.04 479.56,84.69 504.28,85.40 529.00,86.15 553.72,86.95 578.44,87.80 603.16,88.70 627.88,89.64 652.60,90.64 677.33,91.67 702.05,92.76 726.77,93.89 751.49,95.07 776.21,96.29 800.93,97.56 825.65,98.87 850.37,100.23 875.09,101.64 899.81,103.09 924.54,104.58" fill="none" stroke="#ef476f" stroke-width="1.2" stroke-dasharray="5 4"/>
+<polyline points="133.46,79.90 158.19,84.14 182.91,88.44 207.63,92.83 232.35,97.30 257.07,101.83 281.79,106.44 306.51,111.13 331.23,115.88 355.95,120.70 380.67,125.59 405.40,130.55 430.12,135.57 454.84,140.66 479.56,145.80 504.28,151.01 529.00,156.28 553.72,161.61 578.44,166.99 603.16,172.43 627.88,177.92 652.60,183.47 677.33,189.06 702.05,194.71 726.77,200.41 751.49,206.16 776.21,211.96 800.93,217.80 825.65,223.69 850.37,229.62 875.09,235.59 899.81,241.61 924.54,247.67" fill="none" stroke="#26547c" stroke-width="2.0"/>
+<polyline points="133.46,79.90 158.19,84.82 182.91,89.82 207.63,94.90 232.35,100.08 257.07,105.33 281.79,110.67 306.51,116.08 331.23,121.56 355.95,127.12 380.67,132.74 405.40,138.43 430.12,144.18 454.84,149.99 479.56,155.85 504.28,161.77 529.00,167.74 553.72,173.76 578.44,179.82 603.16,185.92 627.88,192.07 652.60,198.25 677.33,204.46 702.05,210.70 726.77,216.98 751.49,223.27 776.21,229.59 800.93,235.94 825.65,242.30 850.37,248.67 875.09,255.06 899.81,261.45 924.54,267.86" fill="none" stroke="#26547c" stroke-width="1.2" stroke-dasharray="5 4"/>
+<circle cx="96.00" cy="66.00" r="4.20" fill="#ef476f" opacity="0.72"><title>CDD step=3</title></circle>
+<text x="108" y="70.00" font-size="12" fill="#333">CDD step=3</text>
+<circle cx="406.00" cy="66.00" r="4.20" fill="#26547c" opacity="0.72"><title>PW reset DFTseg slope=4</title></circle>
+<text x="418" y="70.00" font-size="12" fill="#333">PW reset DFTseg slope=4</text>
+<text x="529.00" y="576" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" fill="#111">Frequency separation Delta k (subcarriers)</text>
+<text x="20" y="288.00" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" fill="#111" transform="rotate(-90 20 288.00)">Normalized covariance</text>
+</svg>
