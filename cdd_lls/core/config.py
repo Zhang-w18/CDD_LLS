@@ -4,7 +4,11 @@ from dataclasses import asdict, dataclass, field, is_dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import copy
-import yaml
+
+try:
+    import yaml
+except ModuleNotFoundError:  # pragma: no cover - only used by minimal runtime environments.
+    yaml = None
 
 
 @dataclass
@@ -176,6 +180,8 @@ def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
 
 
 def load_config(path: str | Path) -> PlatformConfig:
+    if yaml is None:
+        raise ModuleNotFoundError("PyYAML is required to load YAML config files.")
     default = dataclass_to_dict(PlatformConfig())
     with open(path, "r", encoding="utf-8") as f:
         user = yaml.safe_load(f) or {}
@@ -186,6 +192,8 @@ def load_config(path: str | Path) -> PlatformConfig:
 
 
 def save_resolved_config(config: PlatformConfig, path: str | Path) -> None:
+    if yaml is None:
+        raise ModuleNotFoundError("PyYAML is required to save YAML config files.")
     with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(dataclass_to_dict(config), f, allow_unicode=True, sort_keys=False)
 
