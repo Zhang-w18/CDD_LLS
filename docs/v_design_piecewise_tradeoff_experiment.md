@@ -477,14 +477,115 @@ RMMSE 使用的是匹配的完整 `R_g`，所以这里不是 covariance mismatch
 
 40 TB/SNR 的 BLER 样本还偏小，不能把 0.025 到 0.075 的差异解释成精确结论；但趋势是有意义的：尽管分段线性相位的 CE NMSE 更差，它在高 SNR 区间仍略优于 CDD step=2，说明更强的模式展开/频域分集可以抵消一部分 CE 损失。
 
-## 8. 结论
+## 8. 全帕累托前沿的 TDL 链路曲线
+
+为回应“每一个帕累托前沿上的点都比较 NMSE / BLER 曲线”的要求，补充运行了 CDD 前沿 `C1-C7` 和 phase-continuous 分段线性相位前沿 `P1-P12`。带相位跳变的 reset diagnostic 点 `R1-R4` 仍只作为矩阵上界诊断，不纳入链路仿真。
+
+本节使用参考实验记录中的 TDL / MCS / Algorithm 1 风格参数：
+
+| 参数 | 取值 |
+|---|---|
+| 信道 | static exponential TDL |
+| Delay spread | 10 ns |
+| PDSCH allocation | 48 RB x 10 OFDM symbols，576 active subcarriers |
+| Tx/Rx | 8TX / 1RX |
+| DMRS symbols | `[2, 7]` |
+| DMRS spacing | 24 subcarriers |
+| MCS | `nr_256qam` index 8，16QAM，code rate 553/1024 |
+| LDPC iterations | 8 |
+| Algorithm 1 | Direct equivalent-channel full-covariance RMMSE，目标带宽 576 SC |
+| SNR used in final table | 10, 12, 14, 15, 16 dB |
+| Trials | 300 TB / SNR / Pareto point |
+
+说明：正式 run 原计划继续 17/18/20 dB，但按后续要求在 17 dB 刚开始后中断；脚本只保留每个完整 SNR 后写出的 partial 结果，因此最终表只包含完整完成的 10/12/14/15/16 dB。BLER 分辨率为 `1/300=0.0033`。
+
+输出目录：
+
+```text
+outputs/v_design_pareto_link_curves/v_design_pareto_link_20260616_065635/
+```
+
+关键输出文件：
+
+```text
+pareto_link_curves.csv
+pareto_link_targets.csv
+completed_run_summary.json
+postprocess_config.json
+```
+
+后处理命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/run_v_design_pareto_link_curves.py \
+  --postprocess-from outputs/v_design_pareto_link_curves/v_design_pareto_link_20260616_065635 \
+  --fig-dir docs/figures
+```
+
+### 8.1 NMSE 曲线
+
+![CDD Pareto NMSE](figures/experiment19_cdd_pareto_nmse.svg)
+
+![Piecewise Pareto NMSE](figures/experiment19_piecewise_pareto_nmse.svg)
+
+NMSE 维度仍然体现了 CE 难度：更平滑的 CDD 前沿点通常有更低的 Algorithm 1 NMSE；分段线性相位中，斜率更大、`BW0.5` 更小的点 NMSE 更高。16 dB 处的代表性数值如下：
+
+| ID | Implementation | BW0.5 | log10 product | NMSE @16 dB | BLER @16 dB |
+|---|---|---:|---:|---:|---:|
+| C1 | CDD step=2 | 155 | -19.615 | 4.525e-03 | 0.180 |
+| C6 | CDD step=7 | 45 | -0.003 | 6.585e-03 | 0.077 |
+| C7 | CDD step=64 | 5 | 0.000 | 1.413e-02 | 0.093 |
+| P3 | PW cont random slope=4 #940 | 105 | -3.889 | 7.025e-03 | 0.140 |
+| P6 | PW cont cyclic slope=6 | 58 | -0.795 | 7.319e-03 | 0.110 |
+| P8 | PW cont cyclic slope=16 | 21 | -0.042 | 1.077e-02 | 0.037 |
+
+### 8.2 BLER 曲线
+
+![CDD Pareto BLER](figures/experiment19_cdd_pareto_bler.svg)
+
+![Piecewise Pareto BLER](figures/experiment19_piecewise_pareto_bler.svg)
+
+300 trials/SNR 后，多数点已经接近或穿过 10% BLER，但由于按要求停止在 16 dB，没有任何点在本轮完整数据中穿过 1% BLER。表中 `n/a` 表示在 10-16 dB 的完整 SNR 网格内未形成 crossing。
+
+| ID | Type | V implementation | BW0.5 | log10 product | SNR@BLER=0.1 | SNR@BLER=0.01 | min BLER |
+|---|---|---|---:|---:|---:|---:|---:|
+| C1 | CDD | CDD step=2 | 155 | -19.615 | n/a | n/a | 0.180 |
+| C2 | CDD | CDD step=3 | 104 | -10.894 | n/a | n/a | 0.130 |
+| C3 | CDD | CDD step=4 | 78 | -5.524 | n/a | n/a | 0.107 |
+| C4 | CDD | CDD step=5 | 63 | -2.244 | 15.64 | n/a | 0.087 |
+| C5 | CDD | CDD step=6 | 52 | -0.514 | 15.47 | n/a | 0.070 |
+| C6 | CDD | CDD step=7 | 45 | -0.003 | 15.30 | n/a | 0.077 |
+| C7 | CDD | CDD step=64 | 5 | 0.000 | 15.91 | n/a | 0.093 |
+| P1 | Piecewise | PW cont random slope=4 #938 | 119 | -4.496 | n/a | n/a | 0.163 |
+| P2 | Piecewise | PW cont random slope=4 #939 | 112 | -4.054 | n/a | n/a | 0.123 |
+| P3 | Piecewise | PW cont random slope=4 #940 | 105 | -3.889 | n/a | n/a | 0.140 |
+| P4 | Piecewise | PW cont cyclic slope=4 | 92 | -2.587 | n/a | n/a | 0.113 |
+| P5 | Piecewise | PW cont random slope=6 #201 | 64 | -2.301 | 15.75 | n/a | 0.080 |
+| P6 | Piecewise | PW cont cyclic slope=6 | 58 | -0.795 | 14.98 | n/a | 0.097 |
+| P7 | Piecewise | PW cont cyclic slope=8 | 42 | -0.106 | 15.55 | n/a | 0.083 |
+| P8 | Piecewise | PW cont cyclic slope=16 | 21 | -0.042 | 15.34 | n/a | 0.037 |
+| P9 | Piecewise | PW cont cyclic slope=24 | 14 | -0.010 | 15.50 | n/a | 0.063 |
+| P10 | Piecewise | PW cont cyclic slope=32 | 10 | -0.009 | n/a | n/a | 0.147 |
+| P11 | Piecewise | PW cont cyclic slope=48 | 7 | -0.004 | 15.93 | n/a | 0.093 |
+| P12 | Piecewise | PW cont cyclic slope=64 | 5 | -0.003 | 15.92 | n/a | 0.097 |
+
+### 8.3 读数
+
+1. **10% BLER 附近，分段线性相位前沿存在优于 CDD 前沿的点。** 本轮最佳 10% 插值点是 `P6`，约 `14.98 dB`；CDD 中最佳是 `C6`，约 `15.30 dB`。考虑 300 trials 的统计粒度，这个约 `0.32 dB` 的差距应作为趋势读数，而不是最终精确增益。
+2. **1% BLER 尚未覆盖。** 完整数据最高只到 16 dB，最低观测 BLER 为 `P8` 的 `0.0367`，因此 `SNR@BLER=0.01` 均为 `n/a`。若要严格比较 1% BLER，需要恢复 17/18/20 dB 或在 16-20 dB 之间加密。
+3. **NMSE 和 BLER 排序不完全一致。** 例如 `P8` 的 16 dB NMSE 比 `C6` 更差，但 16 dB BLER 更低。这说明在当前 MCS8/TDL/8TX1RX 场景下，频域分集和等效信道幅度分布可以部分抵消 CE NMSE 损失。
+4. **矩阵-协方差 proxy 仍不是完整链路目标。** `BW0.5` 能描述 CE 友好程度的一个侧面，但最终链路性能还取决于完整 RMMSE 矩阵、pilot aliasing、等效 SINR 分布和 LDPC 码字在频域上的交织收益。
+
+## 9. 结论
 
 本实验对文档猜想的验证结果是：
 
 1. **矩阵-Pareto 层面：支持猜想。** 在 8TX/1RX、576 SC、8 段频域配置下，确实存在 phase-continuous 分段线性相位，使其在相近甚至更高的相干带宽下获得远高于 CDD 的奇异值模方乘积。
 2. **信道估计层面：折中明显。** 匹配完整协方差的 Alg1 RMMSE 下，分段线性候选的 NMSE 比 CDD step=2 差约 1.6 到 3.1 dB。
-3. **链路层面：初步正向。** 小样本 BLER 中，分段线性候选在 8 到 14 dB 均略低于 CDD step=2，说明分集收益有机会转化为 BLER 收益，但需要更大 TB 数确认统计显著性。
+3. **链路层面：初步正向。** 小样本 `P3` vs `C1` BLER 中，分段线性候选在 8 到 14 dB 均略低于 CDD step=2；进一步的全帕累托 TDL 链路曲线中，`P6/P8` 等分段线性前沿点在 10% BLER 附近也优于最佳 CDD 前沿点。
 4. **相位跳变必须谨慎。** reset DFT segment phase 的确能构造近似满秩/正交 `V`，但边界相位跳变导致非常大的等效 group-delay spread；这种候选应作为理论上界或诊断工具，而不是直接作为物理可实现方案。
+5. **1% BLER 还未完成。** 按要求停止后，本轮完整数据最高到 16 dB，尚未形成 1% BLER crossing；若需要 1% 结论，应继续 17/18/20 dB 或增加 16-20 dB 的 SNR 密度。
 
 建议下一步扩大 BLER trials，并对 phase-continuous 分段线性相位做目标函数优化，例如直接最大化
 
