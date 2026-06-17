@@ -3312,3 +3312,164 @@ outputs/experiment18_alg1_alg3_nmse_recheck_snr0/experiment18_alg1_alg3_nmse_202
 | 实验18复现 | 10 ns | 512 | 24 | 0 dB | 5.261e-01 | 7.578e-02 | 7.578e-02 | 8.42 dB |
 
 结论：**已复现实验10中约 8 dB 的 Alg3 NMSE 增益。** 新补跑使用 200 trials，得到 8.42 dB；与实验10的 30 trials、7.96 dB 在 Monte Carlo 误差范围和相同物理机制下保持一致。2/3/4/5/6 dB 的 sweep 中，该增益进一步增大到约 9.6 到 13.0 dB，原因是 Alg1 在该稀疏导频和大 CDD 下主要受等效信道快速起伏/aliasing 限制，NMSE 维持在约 0.5，而 Alg3 随 SNR 提升继续改善。
+
+---
+
+## 19. 实验19：固定 DS=10 ns、CDD d=128，继续增大 DMRS spacing 是否能看到 Alg3 增益
+
+### 19.1 实验目的
+
+实验17/18显示，DS=10 ns 下 CDD d=128 的 ideal-CSI BLER 优于或接近 d=512，因此本实验固定 CDD d=128，不再改变 CDD delay，只把 DMRS 频域间隔继续增大到 24 以上，检查：
+
+1. d=128 时，稀疏 DMRS 是否会让 Alg1 的 CDD-equivalent channel 估计变差；
+2. Alg3 因为估计平滑的底层 physical branch channel，是否能在相同总 DMRS 开销下获得 NMSE 增益；
+3. 该 NMSE 增益是否能转化为 BLER 曲线/10% BLER SNR 增益。
+
+### 19.2 方法与运行命令
+
+新增脚本：
+
+```text
+tools/run_experiment19_cdd128_sparse_dmrs.py
+```
+
+运行命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/run_experiment19_cdd128_sparse_dmrs.py \
+  --trials-bler 100 \
+  --trials-nmse 300 \
+  --snrs 2,3,4,5,6,7,8 \
+  --dmrs-spacings 24,36,48,72,96 \
+  --progress-every 100 \
+  --out outputs/experiment19_cdd128_sparse_dmrs \
+  --fig-dir docs/figures
+```
+
+输出目录：
+
+```text
+outputs/experiment19_cdd128_sparse_dmrs/experiment19_20260616_232443/
+```
+
+主要输出文件：
+
+```text
+coherence_bandwidth_cdd128.csv
+nmse_spacing_sweep.csv
+nmse_gain_by_spacing.csv
+bler_spacing_sweep.csv
+bler_target_snr_by_spacing.csv
+bler_gain_by_spacing.csv
+run_config.json
+```
+
+参数条件：
+
+| 项目 | 设置 |
+|---|---|
+| Delay spread | 10 ns |
+| CDD delay | 128 samples |
+| SNR | 2, 3, 4, 5, 6, 7, 8 dB |
+| DMRS spacing | 24, 36, 48, 72, 96 sc |
+| NMSE trials | 300 / point |
+| BLER trials | 100 / point |
+| Tx/Rx | 2Tx / 4Rx |
+| PDSCH allocation | 48 RB, 576 sc, 10 symbols |
+| DMRS symbols | 2 symbols |
+| MCS | MCS8 / 16QAM |
+| Alg1 | CDD-combined equivalent-channel Direct RMMSE WB |
+| Alg3 | equal-total-overhead port-DMRS RMMSE，再按 CDD d=128 合成 equivalent channel |
+
+同开销说明：表中的 `combined pilots` 是两个 DMRS symbol 合并后的频域 pilot observation 数；实际 DMRS RE 数还要乘以 2 个 DMRS symbols。Alg3 在 equal-total 模式下把同一组 combined pilot positions 分给两个端口，因此每端口 pilot 数为 combined pilots 的一半。
+
+### 19.3 相干带宽
+
+DS=10 ns、CDD d=128 下，底层 physical branch channel 仍然非常平滑；CDD 后 equivalent channel 的相干带宽明显变小。
+
+| Channel | Bc 0.9 | Bc 0.7 | Bc 0.5 | Bc 0.2 | Bc 0.1 |
+|---|---:|---:|---:|---:|---:|
+| physical branch H | 267 | n/a | n/a | n/a | n/a |
+| CDD equivalent g | 5 | 9 | 11 | 14 | 15 |
+
+因此当 DMRS spacing 大于 24 时，Alg1 仍然是在远稀于 equivalent-channel 相干带宽的位置采样；Alg3 则是在采样底层 physical channel，但每端口 pilot 数会随 spacing 增大而下降。
+
+### 19.4 NMSE 结果
+
+![Experiment 19 CDD128 sparse DMRS NMSE](figures/experiment19_cdd128_sparse_dmrs_nmse.png)
+
+![Experiment 19 CDD128 sparse DMRS NMSE gain](figures/experiment19_cdd128_sparse_dmrs_nmse_gain.png)
+
+SNR=5 dB：
+
+| DMRS spacing | combined pilots | Alg3 pilots/port | Alg1 NMSE | Alg3 NMSE | Alg3 gain |
+|---:|---:|---:|---:|---:|---:|
+| 24 | 24 | 12 | 3.036e-02 | 3.042e-02 | -0.01 dB |
+| 36 | 16 | 8 | 4.346e-02 | 4.282e-02 | 0.06 dB |
+| 48 | 12 | 6 | 5.616e-02 | 5.532e-02 | 0.07 dB |
+| 72 | 8 | 4 | 8.018e-02 | 7.874e-02 | 0.08 dB |
+| 96 | 6 | 3 | 5.344e-01 | 1.008e-01 | 7.25 dB |
+
+SNR=8 dB：
+
+| DMRS spacing | Alg1 NMSE | Alg3 NMSE | Alg3 gain |
+|---:|---:|---:|---:|
+| 24 | 1.689e-02 | 1.693e-02 | -0.01 dB |
+| 36 | 2.804e-02 | 2.612e-02 | 0.31 dB |
+| 48 | 3.339e-02 | 3.288e-02 | 0.07 dB |
+| 72 | 4.682e-02 | 4.654e-02 | 0.03 dB |
+| 96 | 5.157e-01 | 5.792e-02 | 9.50 dB |
+
+观察：在 spacing=24/36/48/72 时，Alg3 相对 Alg1 的 NMSE gain 很小，大多低于 0.3 dB；到 spacing=96 时，Alg1 NMSE 突然升到约 0.5，而 Alg3 仍保持在 0.06 到 0.10 附近，因此出现 7 到 10 dB 的大 NMSE gain。
+
+### 19.5 BLER 结果
+
+![Experiment 19 CDD128 sparse DMRS BLER](figures/experiment19_cdd128_sparse_dmrs_bler.png)
+
+![Experiment 19 CDD128 sparse DMRS BLER gain](figures/experiment19_cdd128_sparse_dmrs_bler_gain.png)
+
+10% BLER 插值 SNR：
+
+| DMRS spacing | combined pilots | Alg3 pilots/port | Ideal CSI | Alg1 | Alg3 | Alg3 gain |
+|---:|---:|---:|---:|---:|---:|---:|
+| 24 | 24 | 12 | 5.211 | 6.338 | 6.485 | -0.147 dB |
+| 36 | 16 | 8 | 5.339 | 5.910 | 5.749 | 0.161 dB |
+| 48 | 12 | 6 | 5.424 | 7.000 | 6.704 | 0.296 dB |
+| 72 | 8 | 4 | 5.150 | 5.778 | 5.927 | -0.148 dB |
+| 96 | 6 | 3 | 5.000 | n/a | 6.897 | n/a |
+
+关键 SNR 点的 BLER：
+
+| DMRS spacing | SNR | Ideal CSI | Alg1 | Alg3 | Alg1 - Alg3 |
+|---:|---:|---:|---:|---:|---:|
+| 24 | 5 | 0.11 | 0.18 | 0.18 | +0.00 |
+| 24 | 6 | 0.07 | 0.12 | 0.14 | -0.02 |
+| 24 | 7 | 0.04 | 0.07 | 0.07 | +0.00 |
+| 24 | 8 | 0.01 | 0.01 | 0.01 | +0.00 |
+| 36 | 5 | 0.16 | 0.29 | 0.29 | +0.00 |
+| 36 | 6 | 0.04 | 0.09 | 0.07 | +0.02 |
+| 36 | 7 | 0.03 | 0.03 | 0.04 | -0.01 |
+| 36 | 8 | 0.02 | 0.02 | 0.03 | -0.01 |
+| 48 | 5 | 0.13 | 0.21 | 0.26 | -0.05 |
+| 48 | 6 | 0.07 | 0.21 | 0.17 | +0.04 |
+| 48 | 7 | 0.02 | 0.10 | 0.08 | +0.02 |
+| 48 | 8 | 0.00 | 0.00 | 0.01 | -0.01 |
+| 72 | 5 | 0.15 | 0.35 | 0.38 | -0.03 |
+| 72 | 6 | 0.01 | 0.07 | 0.09 | -0.02 |
+| 72 | 7 | 0.00 | 0.06 | 0.08 | -0.02 |
+| 72 | 8 | 0.01 | 0.03 | 0.02 | +0.01 |
+| 96 | 5 | 0.10 | 1.00 | 0.34 | +0.66 |
+| 96 | 6 | 0.03 | 1.00 | 0.25 | +0.75 |
+| 96 | 7 | 0.01 | 1.00 | 0.09 | +0.91 |
+| 96 | 8 | 0.01 | 0.97 | 0.04 | +0.93 |
+
+### 19.6 结论
+
+1. **在 d=128、spacing 刚超过 24 时，可以看到很小的 Alg3 NMSE gain，但不大。** spacing=36/48/72 下，SNR=5 dB 的 NMSE gain 只有 0.06/0.07/0.08 dB；SNR=8 dB 最大也只有 spacing=36 的 0.31 dB。
+2. **小 NMSE gain 只能弱转化为 BLER gain。** 10% BLER SNR 上，spacing=36/48 的 Alg3 分别比 Alg1 好约 0.16/0.30 dB；spacing=24/72 反而略差。100 trials/SNR 下，这些小于 0.3 dB 的差异需要更高 trials 复核。
+3. **spacing=96 时能看到非常明显的 Alg3 NMSE 和 BLER 增益。** 此时 Alg1 NMSE 约 0.5，BLER 在 2 到 8 dB 基本接近全错；Alg3 仍能工作，在 7 dB 达到 BLER=0.09，8 dB 达到 0.04。
+4. **但 spacing=96 不是好的最终工作点。** 它的 Alg3 虽然显著优于 Alg1，但离 ideal CSI 仍有明显 gap，例如 5 dB 时 ideal=0.10、Alg3=0.34；6 dB 时 ideal=0.03、Alg3=0.25。
+5. **整体回答：能看到，但要分区间。** 在 moderately sparse 的 spacing=36/48 下，只能看到小的 Alg3 BLER/NMSE 优势；在 extremely sparse 的 spacing=96 下能看到大优势，但主要是 Alg1 崩溃造成的相对优势，而不是系统吞吐/BLER 最优点。
+
+下一步若要严肃判断 d=128 下的最优 DMRS spacing，建议围绕 spacing=36/48/60/72 做更细 sweep，并把 10% BLER 附近 trials 提高到 300 到 1000；spacing=96 更适合作为“Alg1 failure stress case”，不适合作为候选最优配置。
