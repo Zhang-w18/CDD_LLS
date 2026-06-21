@@ -196,6 +196,31 @@ def dft_segment_offsets(n_segments: int, n_tx: int) -> np.ndarray:
     return 2.0 * np.pi * seg * tx / float(n_tx)
 
 
+def balanced_random_permutation_indices(
+    n_segments: int,
+    n_tx: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    n_segments = int(n_segments)
+    n_tx = int(n_tx)
+    if n_segments > n_tx:
+        raise ValueError(
+            "Cannot assign a distinct local delay to every segment when n_segments > n_tx."
+        )
+    symbol_order = rng.permutation(n_tx)
+    tx_offsets = rng.permutation(n_tx)
+    segment_offsets = rng.permutation(n_tx)[:n_segments]
+    latin_indices = (segment_offsets[:, None] + tx_offsets[None, :]) % n_tx
+    return np.asarray(symbol_order[latin_indices], dtype=np.float64)
+
+
+def centered_delay_alphabet(n_tx: int, slope_step: int) -> np.ndarray:
+    n_tx = int(n_tx)
+    return float(slope_step) * (
+        np.arange(n_tx, dtype=np.float64) - 0.5 * float(n_tx - 1)
+    )
+
+
 def piecewise_reset_design(grid: ResourceGrid, n_tx: int, n_segments: int, slope_step: int) -> VDesign:
     idx = np.arange(int(n_tx), dtype=np.float64)
     delays = float(slope_step) * np.tile(idx[None, :], (int(n_segments), 1))
@@ -236,10 +261,11 @@ def piecewise_continuous_perm_design(
         idx = np.vstack([base if s % 2 == 0 else base[::-1] for s in range(n_segments)])
     elif pattern == "random":
         rng = np.random.default_rng(int(seed))
-        idx = np.vstack([rng.permutation(base) for _ in range(n_segments)])
+        idx = balanced_random_permutation_indices(n_segments, n_tx, rng)
     else:
         raise ValueError(f"Unknown piecewise pattern={pattern}.")
-    delays = float(slope_step) * idx
+    delay_alphabet = centered_delay_alphabet(n_tx, slope_step)
+    delays = delay_alphabet[np.asarray(idx, dtype=np.int64)]
     phase = phase_from_piecewise_delays(
         grid,
         delays,
@@ -253,8 +279,14 @@ def piecewise_continuous_perm_design(
         metadata={
             "n_segments": n_segments,
             "local_slope_step_samples": int(slope_step),
+            "local_delay_min_samples": float(np.min(delay_alphabet)),
+            "local_delay_max_samples": float(np.max(delay_alphabet)),
+            "local_delay_centered": 1,
             "phase_continuous": 1,
             "segment_delay_pattern": pattern,
+            "per_tx_delays_unique_across_segments": int(
+                pattern == "random" or (pattern == "cyclic" and n_segments <= n_tx)
+            ),
             "design_seed": int(seed),
         },
     )
@@ -446,6 +478,8 @@ def pareto_id_prefix(family: str) -> str:
         return "P"
     if str(family) == "piecewise_linear_reset":
         return "R"
+    if str(family) == "piecewise_balanced_signed":
+        return "N"
     return "F"
 
 
@@ -545,6 +579,9 @@ def _svg_marker(x: float, y: float, color: str, shape: str, label: str, size: fl
     if shape == "triangle":
         pts = f"{x:.2f},{y-size:.2f} {x-size:.2f},{y+size:.2f} {x+size:.2f},{y+size:.2f}"
         return f'<polygon points="{pts}" fill="{color}" opacity="0.72">{title}</polygon>'
+    if shape == "diamond":
+        pts = f"{x:.2f},{y-size:.2f} {x-size:.2f},{y:.2f} {x:.2f},{y+size:.2f} {x+size:.2f},{y:.2f}"
+        return f'<polygon points="{pts}" fill="{color}" opacity="0.72">{title}</polygon>'
     if shape == "cross":
         return (
             f'<g opacity="0.8">{title}'
@@ -567,8 +604,9 @@ def _write_svg_plot(
     legend: List[Tuple[str, str, str]],
     width: int = 1040,
     height: int = 640,
+    top_margin: int = 58,
 ) -> None:
-    left, right, top, bottom = 86, 28, 58, 82
+    left, right, top, bottom = 86, 28, int(top_margin), 82
     plot_w = width - left - right
     plot_h = height - top - bottom
     x0, x1 = x_bounds
@@ -586,7 +624,7 @@ def _write_svg_plot(
         grid.append(f'<text x="{left-10}" y="{ty+4:.2f}" font-size="12" text-anchor="end" fill="#333">{val:.3g}</text>')
     legend_items = []
     lx = left + 10
-    ly = top + 12
+    ly = 52 if top >= 100 else top + 12
     for idx, (name, color, shape) in enumerate(legend[:10]):
         x = lx + (idx % 2) * 310
         y = ly + (idx // 2) * 20
@@ -606,19 +644,28 @@ def _write_svg_plot(
     path.write_text(svg, encoding="utf-8")
 
 
-def plot_tradeoff(rows: List[Dict[str, object]], pareto_rows: List[Dict[str, object]], path: Path) -> None:
+def plot_tradeoff(
+    rows: List[Dict[str, object]],
+    pareto_rows: List[Dict[str, object]],
+    path: Path,
+    title: str = "8TX/1RX V-matrix diversity vs CE-coherence tradeoff",
+) -> None:
     families = sorted(set(str(r["family"]) for r in rows))
     colors = {
         "constant_rank1": "#8d99ae",
         "cdd_linear_phase": "#26547c",
         "piecewise_linear_reset": "#ef476f",
         "piecewise_linear_continuous": "#06a77d",
+        "piecewise_linear_continuous_legacy": "#8a9a9a",
+        "piecewise_balanced_signed": "#d97706",
     }
     shapes = {
         "constant_rank1": "cross",
         "cdd_linear_phase": "circle",
         "piecewise_linear_reset": "square",
         "piecewise_linear_continuous": "triangle",
+        "piecewise_linear_continuous_legacy": "cross",
+        "piecewise_balanced_signed": "diamond",
     }
     pts_all = [
         (finite_float(r.get("coherence_bw_abs_0p5_sc")), finite_float(r.get("diversity_log10_product_norm")))
@@ -628,8 +675,8 @@ def plot_tradeoff(rows: List[Dict[str, object]], pareto_rows: List[Dict[str, obj
     ys = [y for x, y in pts_all if np.isfinite(x) and np.isfinite(y)]
     x_bounds = _nice_bounds(xs, floor_zero=True)
     y_bounds = _nice_bounds(ys)
-    left, right, top, bottom = 86, 28, 58, 82
-    width, height = 1040, 640
+    left, right, top, bottom = 86, 28, 120, 82
+    width, height = 1040, 700
     plot_w = width - left - right
     plot_h = height - top - bottom
 
@@ -654,7 +701,13 @@ def plot_tradeoff(rows: List[Dict[str, object]], pareto_rows: List[Dict[str, obj
                 shapes.get(family, "circle"),
                 str(row["precoder"]),
             ))
-    for family, color in (("cdd_linear_phase", "#102a43"), ("piecewise_linear_reset", "#c9184a"), ("piecewise_linear_continuous", "#007f5f")):
+    for family, color, dashed in (
+        ("cdd_linear_phase", "#102a43", False),
+        ("piecewise_linear_reset", "#c9184a", False),
+        ("piecewise_linear_continuous", "#007f5f", False),
+        ("piecewise_linear_continuous_legacy", "#697979", True),
+        ("piecewise_balanced_signed", "#b45309", False),
+    ):
         front = [
             r for r in pareto_rows
             if str(r["family"]) == family
@@ -665,6 +718,7 @@ def plot_tradeoff(rows: List[Dict[str, object]], pareto_rows: List[Dict[str, obj
             [(sx(finite_float(r["coherence_bw_abs_0p5_sc"])), sy(finite_float(r["diversity_log10_product_norm"]))) for r in front],
             color,
             width=2.2,
+            dashed=dashed,
         ))
         for row in front:
             label = str(row.get("pareto_id", ""))
@@ -677,10 +731,21 @@ def plot_tradeoff(rows: List[Dict[str, object]], pareto_rows: List[Dict[str, obj
                 f'font-family="Arial, sans-serif" fill="{color}" font-weight="700">'
                 f'{html.escape(label)}</text>'
             )
-    legend = [(fam, colors.get(fam, "#444"), shapes.get(fam, "circle")) for fam in families]
+    family_labels = {
+        "constant_rank1": "No CDD",
+        "cdd_linear_phase": "CDD",
+        "piecewise_linear_reset": "PW reset diagnostic",
+        "piecewise_linear_continuous": "PW continuous",
+        "piecewise_linear_continuous_legacy": "Legacy PW random",
+        "piecewise_balanced_signed": "New signed balanced PW",
+    }
+    legend = [
+        (family_labels.get(fam, fam), colors.get(fam, "#444"), shapes.get(fam, "circle"))
+        for fam in families
+    ]
     _write_svg_plot(
         path,
-        title="8TX/1RX V-matrix diversity vs CE-coherence tradeoff",
+        title=title,
         xlabel="CE gain proxy: coherence BW at mean |rho| <= 0.5 (subcarriers)",
         ylabel="Diversity gain: log10 det((V^H V)/K)",
         x_bounds=x_bounds,
@@ -689,6 +754,7 @@ def plot_tradeoff(rows: List[Dict[str, object]], pareto_rows: List[Dict[str, obj
         legend=legend,
         width=width,
         height=height,
+        top_margin=top,
     )
 
 

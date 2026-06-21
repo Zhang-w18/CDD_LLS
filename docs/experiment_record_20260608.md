@@ -950,6 +950,21 @@ docs/figures/experiment9_nmse_branch.png
 | `ds100_d32_sf6` | 96 | 576 sc | 29/37/57 taps | 26 sc / 23 / 6 | 48 | 96 |
 | `ds30_d64_sf2` | 288 | 576 sc | 9/12/17 taps | 87 sc / 7 / 1.2 | 144 | 288 |
 
+表中 `Block width / blocks / max cond` 是算法二 `CoherenceBlock Bc0.9` 的三个局部处理参数：
+
+- `Block width`：使用底层物理信道的 $B_c(0.9)$ 作为频域 block 宽度，单位为 subcarrier。每个 block 内假设每个 Tx 端口的底层信道为一个常数复数；若 576 sc allocation 内相关性没有下降到 0.9，则 block width 取整个 576 sc。
+- `blocks`：整个 576 sc allocation 被划分出的 block 数，约为 $\lceil576/\text{Block width}\rceil$，最后一个 block 可以更短。
+- `max cond`：所有局部 block 的 CDD phase matrix $\mathbf A_b$ 中最大的有限条件数：
+
+$$
+\kappa(\mathbf A_b)
+=\frac{\sigma_{\max}(\mathbf A_b)}{\sigma_{\min}(\mathbf A_b)}.
+$$
+
+它衡量该 block 内两个 Tx 端口能否从 CDD-combined pilot 中稳定分离。条件数越接近 1，端口相位特征越容易区分、数值越稳定；条件数越大，矩阵列越接近相关，解耦时越容易放大噪声。这里的 `max cond` 是最差局部 block 的 CDD 解耦矩阵条件数，不是整个信道协方差矩阵的条件数。
+
+例如 `87 sc / 7 / 5.2` 表示每个 block 约 87 个子载波、全带共 7 个 block、最差 block 的条件数为 5.2。增大 CDD delay 通常会增加不同端口在 pilot 上的相位差异，因此相同 DS/DMRS spacing 下，表中 d=32 的 `max cond` 往往小于 d=16。
+
 说明：
 
 - 算法一 `Alg1 Direct RMMSE WB 576sc` 在整个 48 RB allocation 内联合估计，即 576 个 active subcarriers 的 wideband RMMSE，使用所有 combined CDD-DMRS pilot。
@@ -1341,8 +1356,8 @@ outputs/nmse_same_overhead_search_alg2_targeted/search_20260612_231651/
 
 不完全支持的现象：
 
-1. 算法二没有稳定超过算法一。即使底层信道很平坦，算法二多数情况下只是与算法一几乎打平，或因为 support truncation、regularization、矩阵病态而更差。Broad search 中 `Alg2 Basis E99` 的最大正 gain 只有约 `0.014 dB`，`CoherenceBlock Bc0.9` 的最大正 gain 只有约 `0.0007 dB`，都不能视为稳健收益。
-2. 算法三 `equal-total` 也不是一定不差于算法一。在 smooth + sparse + small CDD coherence 的筛选条件下，算法三只有 22/54 个点胜出，最大 gain `0.673 dB`，最差约 `-0.424 dB`。在全部 broad search 中，算法三 107/300 个点胜出，平均 gain 为 `-0.192 dB`。
+1. 算法二没有稳定超过算法一。即使底层信道很平坦，算法二多数情况下只是与算法一几乎打平，或因为 support truncation、regularization、矩阵病态而更差。10.9 统一网格中 `Alg2 Basis E99` 只有 39/420 个点为正，最大正 gain 约 `0.014 dB`，不能视为稳健收益。
+2. 算法三 `equal-total` 也不是一定不差于算法一。10.9 统一网格中算法三有 159/420 个点为正、261/420 个点为负；平均 gain `+0.175 dB`，但中位数为 `-0.086 dB`。正平均值主要由 `CDD=512, spacing=24` 的大增益点拉高，不能解释为算法三在多数场景普遍占优。
 
 原因解释：
 
@@ -1357,9 +1372,205 @@ outputs/nmse_same_overhead_search_alg2_targeted/search_20260612_231651/
 - 算法二在 matched 算法一 baseline 下很难稳定优于算法一，确实可能比算法一差；
 - 若把算法一改成 unknown CDD delay / mismatched covariance baseline，算法二和算法三的相对优势可能会更明显。
 
+### 10.9 统一参数网格：算法二/三完整 gain map
+
+#### 10.9.1 统一目的与口径
+
+10.4 与 10.5 分别采用了不同的 DS、CDD、DMRS spacing、SNR 和 trials，适合记录搜索过程，但不适合直接横向比较。本节建立一套统一网格，作为实验 10 后续引用的最终结果；10.4/10.5 保留为历史搜索记录。
+
+统一 NMSE gain 定义仍为：
+
+$$
+G_{\mathrm{NMSE}}=10\log_{10}\frac{\mathrm{NMSE}_{\mathrm{Alg1}}}{\mathrm{NMSE}_{\mathrm{candidate}}}.
+$$
+
+- $G>0$：candidate 优于算法一；
+- $G<0$：candidate 差于算法一；
+- 热力图保留所有正负值，不再只画 winner；
+- 配色固定为蓝色表示 gain 较小、白色表示 0 dB、红色表示 gain 较大。
+
+算法定义固定如下，避免把多个算法二配置事后择优混为一个算法：
+
+| 曲线/热力图名称 | 固定定义 |
+|---|---|
+| Alg1 baseline | `Direct RMMSE WB 576sc`，使用 matched CDD-shifted PDP covariance |
+| Alg2 gain map | `Basis LMMSE E99`，保留原始 PDP 99% 能量对应的 delay support |
+| Alg3 gain map | `Port-DMRS RMMSE equal-total`，2Tx FDM 拆分且总 DMRS RE 与 Alg1 相同 |
+
+`E99 delay support` 按原始物理信道的离散 PDP 从零时延开始累积，取满足下式的最小连续 tap 数 $L_{99}$：
+
+$$
+\sum_{\ell=0}^{L_{99}-1}p[\ell]\geq 0.99\sum_{\ell}p[\ell].
+$$
+
+统一参数网格中各个 delay spread 对应的实际 E99 support 数如下。`每端口 E99 support` 是算法二在一条物理 Tx-Rx 信道上保留的离散 delay tap 数；本实验为 2Tx，因此联合估计的复信道未知量数为该值的 2 倍。
+
+| Delay spread | 每端口 E99 support | 保留的 tap index | 2Tx 联合未知复数 tap 数 |
+|---:|---:|---:|---:|
+| 1 ns | 1 | 0 | 2 |
+| 5 ns | 3 | 0--2 | 6 |
+| 10 ns | 6 | 0--5 | 12 |
+| 30 ns | 17 | 0--16 | 34 |
+| 100 ns | 57 | 0--56 | 114 |
+
+这里的 support 数由原始 PDP、delay spread 和 99% 能量阈值唯一确定。因此，对固定 DS，表中数值在所有 CDD delay、DMRS spacing 和 SNR 条件下保持不变。CDD shift 体现在联合观测矩阵中的端口相位/时延移位，不会改变每条底层物理信道所采用的 E99 support 长度；表中数值也不是 CDD 合成后的总时延跨度。
+
+这里选择固定的 `Alg2 E99`，是因为它在原 broad/extended sweep 中通常是最接近算法一的算法二配置。E50/E70/E90/E95、`CoherenceBlock` 仍保留在旧实验结果中，但不参与本节 gain map 的逐点定义。
+
+#### 10.9.2 参数条件与复用方法
+
+| 参数 | 统一取值 |
+|---|---|
+| Delay spread | 1, 5, 10, 30, 100 ns |
+| CDD delay | 16, 32, 48, 64, 128, 256, 512 samples |
+| DMRS spacing | 4, 6, 12, 24 sc |
+| SNR | -3, 0, 8 dB |
+| 场景数 | $5\times7\times4\times3=420$ |
+| Trials | 每场景 50 |
+| 随机种子 | 20260612，经 DS/CDD/spacing/SNR 派生稳定场景 seed |
+| 信道 | 每个 trial 独立随机生成 2Tx x 4Rx TDL realization |
+| 带宽 | 48 RB = 576 sc，30 kHz SCS，NFFT=4096 |
+| DMRS symbols | 2 个，symbol index 2/7 |
+
+每个 trial 都重新调用 `generate_tdl_channel(...)` 生成随机底层信道，并重新生成 DMRS observation noise。Alg1 与 Alg2 使用同一底层信道和同一组 CDD-combined DMRS observation；Alg3 使用同一底层信道，但由于 observation 是 per-port DMRS，按其观测维度独立生成噪声。
+
+旧结果只有同时满足以下条件时才复用：场景四元组 `(DS, CDD, spacing, SNR)` 完全相同、seed 相同、trials=50、所需算法配置完整。最终复用 10.4 broad search 的 150 个场景，补跑 270 个场景。10.5 的 trials=30，因此没有混入本节统一数据。
+
+运行命令：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/search_nmse_same_overhead.py \
+  --trials 50 \
+  --delay-spreads-ns 1,5,10,30,100 \
+  --cdd-delays 16,32,48,64,128,256,512 \
+  --dmrs-spacings 4,6,12,24 \
+  --snrs=-3,0,8 \
+  --basis-thresholds 0.90,0.95,0.99 \
+  --reuse-csv outputs/nmse_same_overhead_search/search_20260612_231155/same_overhead_nmse_search.csv \
+  --out outputs/nmse_same_overhead_search_unified \
+  --fig-dir docs/figures \
+  --figure-prefix experiment10_unified
+```
+
+输出目录：
+
+```text
+outputs/nmse_same_overhead_search_unified/search_20260619_164606/
+```
+
+其中 `unified_gain_map.csv` 每行对应一个场景，并列给出 Alg1/Alg2 E99/Alg3 NMSE 和两种 gain；共 420 行数据，不含表头。
+
+#### 10.9.3 算法二 E99 gain map
+
+三张图对算法二使用同一个对称色标范围，因此不同 SNR 可直接比较颜色深浅。格内数字为未裁剪的带符号 gain，单位 dB。
+
+![Experiment 10 unified Alg2 E99 gain map SNR -3](figures/experiment10_unified_alg2_e99_gain_map_snrm3.png)
+
+![Experiment 10 unified Alg2 E99 gain map SNR 0](figures/experiment10_unified_alg2_e99_gain_map_snr0.png)
+
+![Experiment 10 unified Alg2 E99 gain map SNR 8](figures/experiment10_unified_alg2_e99_gain_map_snr8.png)
+
+算法二 E99 的统一统计为：
+
+| 指标 | 结果 |
+|---|---:|
+| 正 gain 点 | 39/420 |
+| 负 gain 点 | 381/420 |
+| 全网格平均 gain | -0.125 dB |
+| 全网格 gain 中位数 | -0.029 dB |
+| 最大 gain | +0.014 dB，DS=5 ns, CDD=256, spacing=12, SNR=0 dB |
+| 最小 gain | -1.433 dB，DS=30 ns, CDD=64, spacing=4, SNR=8 dB |
+
+`+0.014 dB` 的最大正值相对于每点 50 trials 的 Monte Carlo 波动很小，不能解释为算法二的稳定性能收益。DS=1 ns 时 Alg2 与 Alg1 基本重合；随着 DS 和 SNR 增大，E99 的有限 support/model mismatch 更明显，算法二整体转为负 gain。统一网格仍支持原判断：在 matched Alg1 baseline 和相同 CDD-combined observation 下，算法二没有可确认的系统性优势。
+
+#### 10.9.4 算法三 equal-total gain map
+
+三张图对算法三使用同一个对称色标范围；其色标与算法二分开设置，避免算法三最高 18 dB 的极值压平算法二细小差异。格内仍给出每个点的精确带符号 gain。
+
+![Experiment 10 unified Alg3 gain map SNR -3](figures/experiment10_unified_alg3_gain_map_snrm3.png)
+
+![Experiment 10 unified Alg3 gain map SNR 0](figures/experiment10_unified_alg3_gain_map_snr0.png)
+
+![Experiment 10 unified Alg3 gain map SNR 8](figures/experiment10_unified_alg3_gain_map_snr8.png)
+
+算法三的统一统计为：
+
+| 指标 | 结果 |
+|---|---:|
+| 正 gain 点 | 159/420 |
+| 负 gain 点 | 261/420 |
+| 全网格平均 gain | +0.175 dB |
+| 全网格 gain 中位数 | -0.086 dB |
+| 最大 gain | +18.237 dB，DS=1 ns, CDD=512, spacing=24, SNR=8 dB |
+| 最小 gain | -2.146 dB，DS=100 ns, CDD=16, spacing=24, SNR=8 dB |
+
+平均 gain 为正但中位数为负，说明平均值被少量大正值拉高，不能解释为算法三在多数场景普遍占优。`CDD=512, spacing=24` 是最清晰的结构性区域：15/15 个 DS/SNR 组合全部为正 gain。
+
+| DS ns | Alg3 gain @ -3 dB | Alg3 gain @ 0 dB | Alg3 gain @ 8 dB |
+|---:|---:|---:|---:|
+| 1 | +7.855 | +10.600 | +18.237 |
+| 5 | +6.963 | +9.465 | +16.632 |
+| 10 | +5.790 | +8.059 | +14.637 |
+| 30 | +4.437 | +6.430 | +11.954 |
+| 100 | +2.516 | +3.797 | +8.947 |
+
+这一结果也复现并强化了原 `DS=10 ns, CDD=512, spacing=24, SNR=0 dB` 点：统一 50-trial 结果为 Alg1 NMSE `0.5154`、Alg3 NMSE `0.0806`、gain `+8.06 dB`。
+
+但“大 CDD 一定更优”仍不成立。除 `CDD=512, spacing=24` 的强 aliasing/欠采样结构外，多数点的 gain 在零附近正负交错；小 CDD 配合长 DS 时，Alg3 每端口 pilot 数减半的代价占主导，例如 `DS=100 ns, CDD=16` 在三个 SNR 和四种 spacing 下均明显偏负。算法三的优势条件应表述为：**底层信道相对平滑，同时 CDD-equivalent channel 相对 Alg1 的 pilot sampling 出现严重欠采样，而 per-port pilot 仍足以估计底层信道。**
+
+#### 10.9.5 Alg2/Alg3 绝对 NMSE heatmap
+
+前面的 gain map 只表示相对 Alg1 的改善量，不能回答 candidate 本身的误差是否已经足够小。因此这里用同一批 420 点结果补充绝对 equivalent-channel NMSE：
+
+$$
+\mathrm{NMSE}_{\mathrm{dB}}
+=10\log_{10}(\mathrm{NMSE}_{\mathrm{linear}}).
+$$
+
+数值越负表示 NMSE 越小、估计越好。每个 SNR 对应一张组合图：上排为 Alg2 E99，下排为 Alg3 equal-total，四列分别对应 DMRS spacing 4/6/12/24。三张图及两种算法共用同一个 `-29.3` 到 `-2.1 dB` 色标，蓝色表示 NMSE 更小，红色表示 NMSE 更大；格内数字为绝对 NMSE dB 值。
+
+![Experiment 10 unified Alg2 Alg3 absolute NMSE SNR -3](figures/experiment10_unified_alg2_alg3_absolute_nmse_map_snrm3.png)
+
+![Experiment 10 unified Alg2 Alg3 absolute NMSE SNR 0](figures/experiment10_unified_alg2_alg3_absolute_nmse_map_snr0.png)
+
+![Experiment 10 unified Alg2 Alg3 absolute NMSE SNR 8](figures/experiment10_unified_alg2_alg3_absolute_nmse_map_snr8.png)
+
+统一输出 `unified_gain_map.csv` 也新增以下三列，便于直接筛选：
+
+```text
+alg1_nmse_db
+alg2_e99_nmse_db
+alg3_equal_total_nmse_db
+```
+
+以 NMSE gain 最明显的 `CDD=512, spacing=24, SNR=8 dB` 为例：
+
+| DS ns | Alg2 E99 absolute NMSE | Alg3 absolute NMSE | 判断 |
+|---:|---:|---:|---|
+| 1 | -3.0 dB | -21.2 dB | Alg3 绝对误差已经很低 |
+| 5 | -2.9 dB | -19.5 dB | Alg3 绝对误差较低 |
+| 10 | -3.2 dB | -17.8 dB | Alg3 明显优于 Alg2/Alg1 floor |
+| 30 | -3.0 dB | -15.0 dB | Alg3 有明显改善，但绝对误差升高 |
+| 100 | -2.8 dB | -11.8 dB | 虽有大相对 gain，绝对 residual 仍不可忽略 |
+
+绝对图带来三个补充判断：
+
+1. Alg2 E99 在 `CDD=512, spacing=24` 处长期停留在约 `-3 dB`，即 linear NMSE 约 0.5；这与 Alg1 的 sparse-pilot aliasing floor 基本一致。
+2. Alg3 在相同点随着 DS 变小和 SNR 增大可达到很低的绝对 NMSE，例如 DS=1 ns、8 dB 时约 `-21.2 dB`，所以大 gain 不是仅由一个很差的 baseline 人为放大。
+3. “相对 gain 大”仍不等于“绝对 NMSE 足够低”。DS=100 ns 时 Alg3 虽比 Alg1/Alg2 好约 9 dB，但绝对 NMSE 只有约 `-11.8 dB`；这与第 11 章 MCS20/256QAM 下 Alg3 BLER 未进入 1% 的结果一致。
+
+#### 10.9.6 统一结论
+
+1. 后续引用实验 10 的 gain map 时，以本节 420 点统一网格为准；10.4/10.5 仅用于说明搜索路径。
+2. 算法二 E99 没有稳健正 gain，最大 `+0.014 dB` 不足以排除有限 trial 波动。
+3. 算法三不是全局占优，只有 159/420 点为正；负值同样是结果的一部分。
+4. 算法三在 `CDD=512, spacing=24` 出现可复现的大增益，且 DS 越小、SNR 越高时 gain 越大；该区域解释为 Alg1 对快速 CDD-equivalent channel 的 pilot 欠采样，而不是 CDD delay 单调增加必然带来估计增益。
+5. 本节只比较 NMSE。大 CDD 下的最终 BLER 还同时受分集增益、编码、MCS 和等效信道频率选择性影响，不能只根据 NMSE gain map 判定 BLER 最优 CDD。
+
 ---
 
-## 11. CDD delay error sensitivity：算法一/二/三对时延误差的敏感性
+## 11. 算法对比补充：CDD delay 误差敏感性与高阶 MCS BLER
 
 ### 11.1 实验目的
 
@@ -1446,6 +1657,197 @@ $$
 4. 在 `tdl100_d32_sf6_snr8` 中，算法一对 delay error 几乎不敏感，而算法三从 `2.009e-02` 上升到 `1.104e+00`。这说明当底层信道本身已经频率选择性较强时，算法一的 covariance mismatch 影响有限；但算法三的 CDD phase synthesis error 仍然是直接误差源。
 
 当前结论：算法三的增益依赖准确的 CDD delay signaling；如果 delay 有 sample-level 误差，算法三可能比算法一更脆弱。算法一在 matched delay 下很强，在 delay mismatch 下通常比算法三稳健；算法二对 delay 误差也敏感，但当前实现中它的表现多与算法一接近或略差。
+
+### 11.5 Alg3 明显 NMSE 增益点的高阶 MCS BLER 目的
+
+实验 10.9 的统一 gain map 表明，最清晰、可重复的 Alg3 NMSE 增益区域是：
+
+```text
+CDD delay = 512 samples
+DMRS spacing = 24 sc
+```
+
+本节从该区域选取三种不同底层信道条件，并比较 Alg1/Alg3 的 LDPC TB BLER：
+
+| DS | 10.9 中 Alg3 NMSE gain @ 8 dB | 选择目的 |
+|---:|---:|---|
+| 1 ns | +18.237 dB | 极平滑底层信道 |
+| 10 ns | +14.637 dB | 原 8 dB 增益复现点附近 |
+| 100 ns | +8.947 dB | 底层信道频率选择性较强的压力条件 |
+
+这些条件不能把同一 SNR 点的 BLER 数字直接横向排名，因为 DS 不同；本节把它们画在同一张图中，是为了比较各自条件内 Alg1 与 Alg3 的相对变化，以及 NMSE gain 能否传导到高阶调制 BLER。
+
+原实验使用 MCS8/16QAM。本节改用 `nr_256qam MCS20`：
+
+$$
+Q_m=8,\qquad R=682/1024\approx0.666,
+$$
+
+即 256QAM。高阶星座的判决区域更小，对 residual channel-estimation error 和相位误差更敏感，因此更适合观察 Alg1/Alg3 的 CE 差异是否进入 BLER。
+
+### 11.6 参数、Monte Carlo 与同开销条件
+
+| 参数 | 设置 |
+|---|---|
+| Delay spread | 1, 10, 100 ns |
+| CDD delay | 512 samples |
+| DMRS spacing | 基础 24 sc；DS=100 补充 12 sc |
+| SNR | spacing=24：14,16,18,20,22 dB，DS=100 扩展到 24,26,28 dB；spacing=12：14:1:20 dB |
+| MCS | `nr_256qam` index 20，256QAM，R=682/1024 |
+| Trials | 基础 200；DS=100/sp=24 的 22/24/26/28 dB 扩展到 1000 |
+| BLER resolution | 200 trials 时 0.005；1000 trials 时 0.001 |
+| PDSCH | 48 RB x 10 symbols，576 sc，30 kHz SCS |
+| Antennas | 2Tx x 4Rx |
+| DMRS symbols | 2 个，symbol index 2/7 |
+| Combined pilot positions | spacing=24 时 24；spacing=12 时 48 |
+| Alg3 pilot positions/port | spacing=24 时 12；spacing=12 时 24 |
+| TBS / coded bits | 30432 / 45696 bits，9 CB |
+
+在每个 DMRS spacing 内，Alg1 和 Alg3 的总 DMRS RE 完全相同。Alg1 在 combined pilot positions 上观测 CDD-equivalent channel；Alg3 将相同位置在两个 port 间 FDM 拆分，先估计底层 branch channel，再乘回已知 CDD phase 合成等效信道。spacing=12 与 spacing=24 之间开销不同，因此 spacing sweep 用于分析导频密度影响，不是同开销比较。
+
+每个 trial 都重新随机生成：
+
+1. 一次 2Tx x 4Rx TDL channel realization；
+2. 一组新的 payload bits 和 LDPC codeword；
+3. 一组新的 data noise；
+4. 与各算法 pilot observation 对应的新 DMRS noise。
+
+同一 `(DS,SNR,trial)` 内，Alg1/Alg3 共用底层信道、payload 和 data noise，使用 common random numbers 降低算法间比较方差；两者的 DMRS noise 按各自不同 observation 设计独立生成。跨 trial、跨 SNR、跨 DS 都重新随机采样信道。
+
+### 11.7 运行命令与输出
+
+基础正式运行：
+
+```bash
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/run_experiment11_alg3_gain_bler.py \
+  --delay-spreads-ns 1,10,100 \
+  --snrs 14,16,18,20,22 \
+  --mcs-index 20 \
+  --trials 200 \
+  --progress-every 50 \
+  --out outputs/experiment11_alg3_gain_bler \
+  --fig-dir docs/figures
+```
+
+DS=100 ns 在 22 dB 尚未到 1% BLER，因此通过脚本的 `--reuse-csv` 入口追加 spacing=12 曲线，并把 spacing=24 的 22/24/26/28 dB 从 200 trials 续跑到 1000 trials。续跑从 trial 201 开始，继承原 TB/CB error 和 NMSE 累积量，不重复前 200 个 trial。最终合并目录：
+
+```bash
+# Add DS=100, spacing=12 curves.
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/run_experiment11_alg3_gain_bler.py \
+  --delay-spreads-ns 100 \
+  --dmrs-spacing-sc 12 \
+  --snrs 14,15,16,17,18,19,20 \
+  --mcs-index 20 \
+  --trials 200 \
+  --reuse-csv outputs/experiment11_alg3_gain_bler/experiment11_alg3_gain_bler_20260619_192616/alg1_alg3_high_mcs_bler.csv \
+  --out outputs/experiment11_alg3_gain_bler \
+  --fig-dir docs/figures
+
+# Extend DS=100, spacing=24 high-SNR points from 200 to 1000 trials.
+/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python \
+  tools/run_experiment11_alg3_gain_bler.py \
+  --delay-spreads-ns 100 \
+  --dmrs-spacing-sc 24 \
+  --snrs 22,24,26,28 \
+  --mcs-index 20 \
+  --trials 1000 \
+  --reuse-csv outputs/experiment11_alg3_gain_bler/experiment11_alg3_gain_bler_20260619_231937/alg1_alg3_high_mcs_bler.csv \
+  --out outputs/experiment11_alg3_gain_bler \
+  --fig-dir docs/figures
+```
+
+```text
+outputs/experiment11_alg3_gain_bler/experiment11_alg3_gain_bler_20260619_234019/
+```
+
+输出文件：
+
+```text
+alg1_alg3_high_mcs_bler.csv
+alg1_alg3_high_mcs_target_snr.csv
+run_config.json
+docs/figures/experiment11_alg1_alg3_high_mcs_bler.png
+```
+
+### 11.8 BLER 结果
+
+所有条件画在同一坐标轴中：颜色区分 DS；Alg1 使用虚线方块，Alg3 使用实线圆点；实心 marker 表示 spacing=24，空心 marker 表示 spacing=12。spacing=12 只补充 DS=100 ns 的两种算法。
+
+![Experiment 11 Alg1 Alg3 high-MCS BLER](figures/experiment11_alg1_alg3_high_mcs_bler.png)
+
+spacing=24 原始 TB BLER：
+
+| DS | Algorithm | 14 dB | 16 dB | 18 dB | 20 dB | 22 dB | 24 dB | 26 dB | 28 dB |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | Alg1 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | - | - | - |
+| 1 | Alg3 | 0.865 | 0.395 | 0.060 | 0.020 | 0.000 | - | - | - |
+| 10 | Alg1 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | - | - | - |
+| 10 | Alg3 | 0.905 | 0.520 | 0.140 | 0.005 | 0.005 | - | - | - |
+| 100 | Alg1 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| 100 | Alg3 | 1.000 | 0.995 | 0.700 | 0.245 | 0.059 | 0.018 | 0.030 | 0.042 |
+
+其中 DS=100 的 22/24/26/28 dB 为 1000 trials，其余为 200 trials。
+
+DS=100、spacing=12 原始 TB BLER：
+
+| Algorithm | 14 dB | 15 dB | 16 dB | 17 dB | 18 dB | 19 dB | 20 dB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Alg1 | 1.000 | 0.985 | 0.785 | 0.395 | 0.050 | 0.010 | 0.000 |
+| Alg3 | 1.000 | 0.980 | 0.810 | 0.360 | 0.035 | 0.010 | 0.000 |
+
+图中 0 error 点不能放在对数轴零点，因此按 `0.5/trials` 放在显示 floor；原始 CSV 中仍保留实测值 0。该点只表示相应 trials 中未观察到 TB error，不表示真实 BLER 等于显示 floor。
+
+目标 BLER 插值 SNR：
+
+| DS | Spacing | Algorithm | SNR @ 10% BLER | SNR @ 1% BLER |
+|---:|---:|---|---:|---:|
+| 1 | 24 | Alg1 | no crossing | no crossing |
+| 1 | 24 | Alg3 | 17.458 dB | 20.262 dB |
+| 10 | 24 | Alg1 | no crossing | no crossing |
+| 10 | 24 | Alg3 | 18.202 dB | 19.584 dB |
+| 100 | 24 | Alg1 | no crossing | no crossing |
+| 100 | 24 | Alg3 | 21.259 dB | no crossing through 28 dB |
+| 100 | 12 | Alg1 | 17.665 dB | 19.000 dB |
+| 100 | 12 | Alg3 | 17.550 dB | 19.000 dB |
+
+DS=1/10、spacing=24 的 Alg3 曲线都已实测到 0.01 以下。DS=100、spacing=12 时 Alg1/Alg3 在 19 dB 都为 `2/200=0.01`，20 dB 都为 `0/200`；加密导频后两算法 waterfall 基本重合。DS=100、spacing=24 即使扩展到 1000 trials，Alg3 在 28 dB 仍为 `42/1000=0.042`，因此存在明确的低 BLER floor。
+
+#### 11.8.1 DS=100/sp=24 翘尾的 1000-trial 复核
+
+高 SNR Alg3 结果及 Wilson 95% 二项置信区间：
+
+| SNR | TB errors/trials | BLER | Wilson 95% CI | CE NMSE |
+|---:|---:|---:|---:|---:|
+| 22 dB | 59/1000 | 0.059 | [0.046, 0.075] | 0.01060 |
+| 24 dB | 18/1000 | 0.018 | [0.011, 0.028] | 0.00951 |
+| 26 dB | 30/1000 | 0.030 | [0.021, 0.043] | 0.00871 |
+| 28 dB | 42/1000 | 0.042 | [0.031, 0.056] | 0.00825 |
+
+结论不是“纯统计波动”，也不是简单的水平 error floor：
+
+1. 原 200-trial 曲线确实含有明显统计波动，例如 22 dB 从 0.045 修正为 0.059；
+2. 但 1000 trials 后 24 dB 到 28 dB 的上升仍保留，而且 24 dB 与 28 dB 的 Wilson 95% 区间已经分开；
+3. CE NMSE 从 0.00951 单调下降到 0.00825，而 BLER 反而从 0.018 上升到 0.042，说明上翘不是平均 CE NMSE 变差导致的。
+
+当前最可能的原因是接收机 LLR model mismatch。`llr_for_candidate()` 中的 effective noise variance 只包含 thermal noise，没有显式加入 residual CE error self-noise。高 SNR 下 thermal noise 继续减小，但 Alg3 的 interpolation residual 不消失，demapper 因而产生幅度过大的错误 LLR，LDPC 会对错误 bit 过度置信。所以上翘应解释为：**真实 residual-CE BLER floor 与当前 LLR mismatch 共同作用，外加有限 Monte Carlo 波动；不是单纯统计抖动。** 若要判断修正接收机后的物理 floor，需要把 CE error variance 加入 `no_eff` 后再跑一次。
+
+高 SNR 右端的 CE NMSE 对比进一步确认“NMSE gain 随 SNR 增大”：
+
+| DS | SNR | Alg1 NMSE | Alg3 NMSE | Alg3 NMSE gain |
+|---:|---:|---:|---:|---:|
+| 1 | 22 dB | 0.50158 | 0.000331 | +31.81 dB |
+| 10 | 22 dB | 0.48682 | 0.001062 | +26.61 dB |
+| 100 | 28 dB | 0.50098 | 0.008248 | +17.83 dB |
+
+### 11.9 结果解读
+
+1. **spacing=24 下明显 NMSE gain 已转化成明显 BLER gain。** 三种 DS 下 Alg1 在所有已测 SNR 都为 BLER=1，而 Alg3 均形成下降趋势；DS=1/10 最终进入 1% 以下。
+2. **spacing=24 的 Alg1 问题是 pilot aliasing。** CDD d=512 的相位周期为 $4096/512=8$ sc，而 spacing=24 是 8 的整数倍。Alg1 NMSE 维持约 0.5，因此提高 SNR 到 28 dB 仍不能恢复 BLER。
+3. **spacing=12 消除了主要 aliasing，Alg1/Alg3 重新接近。** DS=100 下两者在 19 dB 都达到 BLER=0.01，20 dB 都是 0/200；Alg3 的 10% crossing 只比 Alg1 好约 0.12 dB，不能视为大增益。
+4. **高阶 MCS 放大了 residual CE 与 LLR mismatch。** MCS20/256QAM 下，spacing=24 的 Alg3 虽比 Alg1 好很多，但 DS=100 仍出现 1% 以上的 BLER floor 和 24 dB 后的上翘；1000 trials 说明它不只是统计抖动。
+5. **本结果不是 CDD=512 的全局 BLER 最优性证明。** 实验 17/18 已说明 ideal-CSI 分集最优 CDD 还受 MCS、DS 和编码影响。本节只证明：在 `d=512, spacing=24` 的严重欠采样区域，Alg3 能把 NMSE 优势传导到 BLER；导频加密到 spacing=12 后，这种算法差异大幅缩小。
 
 ---
 
@@ -3357,6 +3759,7 @@ outputs/experiment19_cdd128_sparse_dmrs/experiment19_20260616_232443/
 
 ```text
 coherence_bandwidth_cdd128.csv
+frequency_correlation_cdd128.csv
 nmse_spacing_sweep.csv
 nmse_gain_by_spacing.csv
 bler_spacing_sweep.csv
@@ -3382,11 +3785,31 @@ run_config.json
 | Alg1 | CDD-combined equivalent-channel Direct RMMSE WB |
 | Alg3 | equal-total-overhead port-DMRS RMMSE，再按 CDD d=128 合成 equivalent channel |
 
+BLER Monte Carlo 采样说明：本实验每个 `(DMRS spacing, SNR)` 点使用 `100 trials`，因此 BLER 分辨率为 `0.01`。本轮共有 5 个 DMRS spacing 和 7 个 SNR 点，因此 BLER 部分总计 `5 x 7 x 100 = 3500` 个随机 trial。每个 trial 都会重新随机生成一次底层 2Tx x 4Rx TDL 信道 realization，代码中 seed 包含 `spacing/SNR/trial`，并在 trial 内调用 `generate_tdl_channel(...)`。同一个 trial 内，`Ideal CSI`、`Alg1`、`Alg3` 共用同一条底层信道、同一组 payload bits 和同一组 data noise，以减少算法间比较的 Monte Carlo 方差；Alg1 和 Alg3 分别生成各自 DMRS observation noise，并使用相同总 DMRS 开销。
+
 同开销说明：表中的 `combined pilots` 是两个 DMRS symbol 合并后的频域 pilot observation 数；实际 DMRS RE 数还要乘以 2 个 DMRS symbols。Alg3 在 equal-total 模式下把同一组 combined pilot positions 分给两个端口，因此每端口 pilot 数为 combined pilots 的一半。
 
 ### 19.3 相干带宽
 
 DS=10 ns、CDD d=128 下，底层 physical branch channel 仍然非常平滑；CDD 后 equivalent channel 的相干带宽明显变小。
+
+频域相关函数按 PDP 的归一化傅立叶变换计算：
+
+$$
+\rho(\Delta k)
+=
+\left|
+\frac{
+\sum_\ell p[\ell]\exp\left(-j2\pi\Delta k\ell/N_{\mathrm{FFT}}\right)
+}{
+\sum_\ell p[\ell]
+}
+\right|.
+$$
+
+其中 `physical branch H` 使用原始底层 PDP，`CDD equivalent g` 使用加入 CDD d=128 后的等效 shifted PDP。横坐标 $\Delta k$ 是子载波间隔，单位为 RE/subcarrier 数。
+
+![Experiment 19 CDD128 frequency correlation](figures/experiment19_cdd128_frequency_correlation.png)
 
 | Channel | Bc 0.9 | Bc 0.7 | Bc 0.5 | Bc 0.2 | Bc 0.1 |
 |---|---:|---:|---:|---:|---:|

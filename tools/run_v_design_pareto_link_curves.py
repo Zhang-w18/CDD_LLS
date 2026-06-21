@@ -153,15 +153,17 @@ def compute_piecewise_gain_rows(target_rows: Sequence[Dict[str, object]]) -> Lis
     return gain_rows
 
 
-def write_analysis_outputs(rows: Sequence[Dict[str, object]], out_dir: Path, fig_dir: Path) -> None:
+def write_analysis_outputs(rows: Sequence[Dict[str, object]], out_dir: Path, fig_dir: Path, fig_prefix: str = "experiment19") -> None:
     write_csv(list(rows), out_dir / "pareto_link_curves.csv")
     target_rows = compute_target_rows(rows)
     write_csv(target_rows, out_dir / "pareto_link_targets.csv")
     write_csv(compute_piecewise_gain_rows(target_rows), out_dir / "pareto_link_piecewise_gain_vs_best_cdd.csv")
-    svg_line_plot(rows, metric="ce_nmse_mean", family="cdd_linear_phase", title="CDD Pareto Alg1 NMSE", ylabel="NMSE", path=fig_dir / "experiment19_cdd_pareto_nmse.svg", log_y=True)
-    svg_line_plot(rows, metric="ce_nmse_mean", family="piecewise_linear_continuous", title="Piecewise-linear Pareto Alg1 NMSE", ylabel="NMSE", path=fig_dir / "experiment19_piecewise_pareto_nmse.svg", log_y=True)
-    svg_line_plot(rows, metric="bler", family="cdd_linear_phase", title="CDD Pareto BLER", ylabel="BLER", path=fig_dir / "experiment19_cdd_pareto_bler.svg", log_y=True, threshold_lines=(0.1, 0.01))
-    svg_line_plot(rows, metric="bler", family="piecewise_linear_continuous", title="Piecewise-linear Pareto BLER", ylabel="BLER", path=fig_dir / "experiment19_piecewise_pareto_bler.svg", log_y=True, threshold_lines=(0.1, 0.01))
+    svg_line_plot(rows, metric="ce_nmse_mean", family="cdd_linear_phase", title="CDD Pareto Alg1 NMSE", ylabel="NMSE", path=fig_dir / f"{fig_prefix}_cdd_pareto_nmse.svg", log_y=True)
+    svg_line_plot(rows, metric="ce_nmse_mean", family="piecewise_linear_continuous", title="Piecewise-linear Pareto Alg1 NMSE", ylabel="NMSE", path=fig_dir / f"{fig_prefix}_piecewise_pareto_nmse.svg", log_y=True)
+    svg_line_plot(rows, metric="bler", family="cdd_linear_phase", title="CDD Pareto BLER", ylabel="BLER", path=fig_dir / f"{fig_prefix}_cdd_pareto_bler.svg", log_y=True, threshold_lines=(0.1, 0.01))
+    svg_line_plot(rows, metric="bler", family="piecewise_linear_continuous", title="Piecewise-linear Pareto BLER", ylabel="BLER", path=fig_dir / f"{fig_prefix}_piecewise_pareto_bler.svg", log_y=True, threshold_lines=(0.1, 0.01))
+    svg_all_pareto_plot(rows, metric="ce_nmse_mean", title="All Pareto Alg1 NMSE", ylabel="NMSE", path=fig_dir / f"{fig_prefix}_all_pareto_nmse.svg", log_y=True)
+    svg_all_pareto_plot(rows, metric="bler", title="All Pareto BLER", ylabel="BLER", path=fig_dir / f"{fig_prefix}_all_pareto_bler.svg", log_y=True, threshold_lines=(0.1, 0.01))
 
 
 def svg_line_plot(
@@ -218,17 +220,30 @@ def svg_line_plot(
         "#9d4edd", "#2a9d8f", "#d62828", "#6a994e", "#003049", "#bc6c25",
     ]
     grid = []
-    for i in range(6):
-        x = left + plot_w * i / 5
-        val = x0 + (x1 - x0) * i / 5
+    unique_xs = sorted(set(xs))
+    x_ticks = unique_xs if len(unique_xs) <= 8 else [x0 + (x1 - x0) * i / 5 for i in range(6)]
+    for val in x_ticks:
+        x = sx(val)
         grid.append(f'<line x1="{x:.2f}" y1="{top}" x2="{x:.2f}" y2="{top+plot_h}" stroke="#e6e8eb"/>')
         grid.append(f'<text x="{x:.2f}" y="{top+plot_h+24}" font-size="12" text-anchor="middle">{val:.3g}</text>')
-    for i in range(6):
-        y = top + plot_h - plot_h * i / 5
-        val = y0 + (y1 - y0) * i / 5
-        label = f"{10**val:.3g}" if log_y else f"{val:.3g}"
-        grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left+plot_w}" y2="{y:.2f}" stroke="#e6e8eb"/>')
-        grid.append(f'<text x="{left-8}" y="{y+4:.2f}" font-size="12" text-anchor="end">{label}</text>')
+    if log_y:
+        major_exponents = range(math.ceil(y0), math.floor(y1) + 1)
+        for exponent in major_exponents:
+            y = top + plot_h - (exponent - y0) / max(y1 - y0, 1e-12) * plot_h
+            grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left+plot_w}" y2="{y:.2f}" stroke="#d9dde2"/>')
+            grid.append(f'<text x="{left-8}" y="{y+4:.2f}" font-size="12" text-anchor="end">1e{exponent}</text>')
+        for exponent in range(math.floor(y0), math.ceil(y1) + 1):
+            for multiplier in (2, 5):
+                value = math.log10(multiplier) + exponent
+                if y0 < value < y1:
+                    y = top + plot_h - (value - y0) / max(y1 - y0, 1e-12) * plot_h
+                    grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left+plot_w}" y2="{y:.2f}" stroke="#eef0f2"/>')
+    else:
+        for i in range(6):
+            y = top + plot_h - plot_h * i / 5
+            val = y0 + (y1 - y0) * i / 5
+            grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left+plot_w}" y2="{y:.2f}" stroke="#e6e8eb"/>')
+            grid.append(f'<text x="{left-8}" y="{y+4:.2f}" font-size="12" text-anchor="end">{val:.3g}</text>')
     elements = []
     for target in threshold_lines:
         y = sy(float(target))
@@ -262,6 +277,213 @@ def svg_line_plot(
 {''.join(legend)}
 <text x="{left+plot_w/2}" y="{height-24}" text-anchor="middle" font-size="14">SNR (dB)</text>
 <text x="20" y="{top+plot_h/2}" text-anchor="middle" font-size="14" transform="rotate(-90 20 {top+plot_h/2})">{ylabel}</text>
+</svg>
+'''
+    path.write_text(svg, encoding="utf-8")
+
+
+def svg_all_pareto_plot(
+    rows: Sequence[Dict[str, object]],
+    *,
+    metric: str,
+    title: str,
+    ylabel: str,
+    path: Path,
+    log_y: bool,
+    threshold_lines: Sequence[float] = (),
+    label_endpoints: bool = True,
+    direct_labels: bool = False,
+) -> None:
+    families = {"cdd_linear_phase", "piecewise_linear_continuous"}
+    plot_rows = [r for r in rows if str(r["family"]) in families]
+    if not plot_rows:
+        return
+    groups: Dict[str, List[Dict[str, object]]] = {}
+    for row in plot_rows:
+        groups.setdefault(str(row["pareto_id"]), []).append(row)
+    width, height = 1240, 720
+    left, right, top, bottom = 84, 250, 56, 82
+    plot_w = width - left - right
+    plot_h = height - top - bottom
+    xs = [float(r["snr_db"]) for r in plot_rows]
+    y_floor = 1e-8
+
+    def display_value(row: Dict[str, object]) -> float:
+        value = float(row[metric])
+        if metric.startswith("bler") and value <= 0.0:
+            return 0.5 / max(float(row.get("trials", 1)), 1.0)
+        return max(value, y_floor)
+
+    raw_ys = [display_value(r) for r in plot_rows]
+    ys = [math.log10(y) for y in raw_ys] if log_y else raw_ys
+    if threshold_lines:
+        ys.extend(math.log10(x) if log_y else x for x in threshold_lines)
+    x0, x1 = min(xs), max(xs)
+    y0, y1 = min(ys), max(ys)
+    xpad = 0.04 * (x1 - x0)
+    ypad = 0.08 * (y1 - y0)
+    x0 -= xpad
+    x1 += xpad
+    y0 -= ypad
+    y1 += ypad
+
+    def sx(x: float) -> float:
+        return left + (x - x0) / max(x1 - x0, 1e-12) * plot_w
+
+    def sy(y: float) -> float:
+        yy = math.log10(max(y, y_floor)) if log_y else y
+        return top + plot_h - (yy - y0) / max(y1 - y0, 1e-12) * plot_h
+
+    cdd_colors = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9", "#6F4E7C", "#222222"]
+    pw_colors = ["#A0006D", "#7A3E00", "#117733", "#332288", "#AA4499", "#44AA99", "#882255", "#999933", "#661100", "#004488", "#EE7733", "#228833"]
+    cdd_markers = ["circle", "square", "triangle", "diamond", "down_triangle", "cross", "x", "hexagon"]
+    pw_markers = ["circle", "square", "triangle", "diamond"]
+    family_order = {"cdd_linear_phase": 0, "piecewise_linear_continuous": 1}
+
+    def marker_svg(marker: str, x: float, y: float, color: str, title_text: str, filled: bool) -> str:
+        fill = color if filled else "white"
+        common = f'stroke="{color}" stroke-width="1.6" fill="{fill}"'
+        if marker == "circle":
+            shape = f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4" {common}/>'
+        elif marker == "square":
+            shape = f'<rect x="{x-3.8:.2f}" y="{y-3.8:.2f}" width="7.6" height="7.6" {common}/>'
+        elif marker == "triangle":
+            shape = f'<polygon points="{x:.2f},{y-4.6:.2f} {x-4.3:.2f},{y+3.6:.2f} {x+4.3:.2f},{y+3.6:.2f}" {common}/>'
+        elif marker == "down_triangle":
+            shape = f'<polygon points="{x-4.3:.2f},{y-3.6:.2f} {x+4.3:.2f},{y-3.6:.2f} {x:.2f},{y+4.6:.2f}" {common}/>'
+        elif marker == "diamond":
+            shape = f'<polygon points="{x:.2f},{y-4.5:.2f} {x-4.5:.2f},{y:.2f} {x:.2f},{y+4.5:.2f} {x+4.5:.2f},{y:.2f}" {common}/>'
+        elif marker == "hexagon":
+            shape = f'<polygon points="{x-4.2:.2f},{y:.2f} {x-2.1:.2f},{y-3.7:.2f} {x+2.1:.2f},{y-3.7:.2f} {x+4.2:.2f},{y:.2f} {x+2.1:.2f},{y+3.7:.2f} {x-2.1:.2f},{y+3.7:.2f}" {common}/>'
+        elif marker == "cross":
+            shape = f'<path d="M {x-4:.2f} {y:.2f} H {x+4:.2f} M {x:.2f} {y-4:.2f} V {y+4:.2f}" stroke="{color}" stroke-width="2" fill="none"/>'
+        else:
+            shape = f'<path d="M {x-3.5:.2f} {y-3.5:.2f} L {x+3.5:.2f} {y+3.5:.2f} M {x+3.5:.2f} {y-3.5:.2f} L {x-3.5:.2f} {y+3.5:.2f}" stroke="{color}" stroke-width="2" fill="none"/>'
+        return f'<g><title>{title_text}</title>{shape}</g>'
+
+    def sort_key(pid: str) -> Tuple[int, int]:
+        fam = str(groups[pid][0]["family"])
+        return family_order.get(fam, 99), int(pid[1:])
+
+    grid = []
+    unique_xs = sorted(set(xs))
+    x_ticks = unique_xs if len(unique_xs) <= 8 else [x0 + (x1 - x0) * i / 5 for i in range(6)]
+    for val in x_ticks:
+        x = sx(val)
+        grid.append(f'<line x1="{x:.2f}" y1="{top}" x2="{x:.2f}" y2="{top+plot_h}" stroke="#e6e8eb"/>')
+        grid.append(f'<text x="{x:.2f}" y="{top+plot_h+24}" font-size="12" text-anchor="middle">{val:.3g}</text>')
+    if log_y:
+        major_exponents = range(math.ceil(y0), math.floor(y1) + 1)
+        for exponent in major_exponents:
+            y = top + plot_h - (exponent - y0) / max(y1 - y0, 1e-12) * plot_h
+            grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left+plot_w}" y2="{y:.2f}" stroke="#d9dde2"/>')
+            grid.append(f'<text x="{left-8}" y="{y+4:.2f}" font-size="12" text-anchor="end">1e{exponent}</text>')
+        for exponent in range(math.floor(y0), math.ceil(y1) + 1):
+            for multiplier in (2, 5):
+                value = math.log10(multiplier) + exponent
+                if y0 < value < y1:
+                    y = top + plot_h - (value - y0) / max(y1 - y0, 1e-12) * plot_h
+                    grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left+plot_w}" y2="{y:.2f}" stroke="#eef0f2"/>')
+    else:
+        for i in range(6):
+            y = top + plot_h - plot_h * i / 5
+            val = y0 + (y1 - y0) * i / 5
+            grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left+plot_w}" y2="{y:.2f}" stroke="#e6e8eb"/>')
+            grid.append(f'<text x="{left-8}" y="{y+4:.2f}" font-size="12" text-anchor="end">{val:.3g}</text>')
+    elements = []
+    for target in threshold_lines:
+        y = sy(float(target))
+        elements.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left+plot_w}" y2="{y:.2f}" stroke="#111" stroke-width="1" stroke-dasharray="5 4"/>')
+        elements.append(f'<text x="{left+plot_w+8}" y="{y+4:.2f}" font-size="11" fill="#111">{target:g}</text>')
+    legend = []
+    direct_label_specs = []
+    cdd_idx = 0
+    pw_idx = 0
+    for idx, pid in enumerate(sorted(groups, key=sort_key)):
+        pts = sorted(groups[pid], key=lambda r: float(r["snr_db"]))
+        fam = str(pts[0]["family"])
+        numeric_id = int(pid[1:])
+        if fam == "cdd_linear_phase":
+            color = cdd_colors[numeric_id % len(cdd_colors)]
+            marker = cdd_markers[numeric_id % len(cdd_markers)]
+            dash = "5 3"
+            filled = False
+            cdd_idx += 1
+        else:
+            color = pw_colors[pw_idx % len(pw_colors)]
+            marker = pw_markers[pw_idx % len(pw_markers)]
+            dash = ""
+            filled = True
+            pw_idx += 1
+        coords = []
+        for row in pts:
+            x = sx(float(row["snr_db"]))
+            y = sy(display_value(row))
+            coords.append(f"{x:.2f},{y:.2f}")
+            elements.append(marker_svg(marker, x, y, color, f'{pid} {row["precoder"]}', filled))
+        points_attr = " ".join(coords)
+        dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
+        elements.append(f'<polyline points="{points_attr}" fill="none" stroke="{color}" stroke-width="2.1"{dash_attr}/>')
+        if label_endpoints:
+            last = pts[-1]
+            elements.append(f'<text x="{sx(float(last["snr_db"]))+5:.2f}" y="{sy(display_value(last))+4:.2f}" font-size="10" fill="{color}" font-weight="700">{pid}</text>')
+        if direct_labels:
+            target_log = math.log10(0.03) if metric.startswith("bler") else sum(ys) / len(ys)
+            anchor = min(
+                pts,
+                key=lambda row: abs(
+                    (math.log10(display_value(row)) if log_y else display_value(row)) - target_log
+                ),
+            )
+            direct_label_specs.append({
+                "pid": pid,
+                "color": color,
+                "x": sx(float(anchor["snr_db"])),
+                "y": sy(display_value(anchor)),
+            })
+        lx = left + plot_w + 26
+        ly = top + 18 + idx * 18
+        legend.append(f'<line x1="{lx}" y1="{ly:.2f}" x2="{lx+18}" y2="{ly:.2f}" stroke="{color}" stroke-width="2"{dash_attr}/>')
+        legend.append(marker_svg(marker, lx+9, ly, color, pid, filled))
+        legend.append(f'<text x="{lx+24}" y="{ly+4:.2f}" font-size="11">{pid}</text>')
+
+    if direct_label_specs:
+        ordered = sorted(direct_label_specs, key=lambda item: float(item["y"]))
+        gap = 15.0
+        label_ys = []
+        for item in ordered:
+            desired = min(max(float(item["y"]), top + 10.0), top + plot_h - 8.0)
+            label_ys.append(max(desired, label_ys[-1] + gap) if label_ys else desired)
+        overflow = label_ys[-1] - (top + plot_h - 8.0)
+        if overflow > 0:
+            label_ys = [value - overflow for value in label_ys]
+        for item, label_y in zip(ordered, label_ys):
+            anchor_x = float(item["x"])
+            anchor_y = float(item["y"])
+            label_x = min(anchor_x + 58.0, left + plot_w - 30.0)
+            end_x = label_x - 6.0
+            end_y = label_y - 3.0
+            dx = end_x - anchor_x
+            dy = end_y - anchor_y
+            norm = max(math.hypot(dx, dy), 1e-12)
+            ux, uy = dx / norm, dy / norm
+            base_x, base_y = end_x - 6.0 * ux, end_y - 6.0 * uy
+            perp_x, perp_y = -uy * 3.0, ux * 3.0
+            color = str(item["color"])
+            elements.append(f'<line x1="{anchor_x:.2f}" y1="{anchor_y:.2f}" x2="{base_x:.2f}" y2="{base_y:.2f}" stroke="{color}" stroke-width="1.2"/>')
+            elements.append(f'<polygon points="{end_x:.2f},{end_y:.2f} {base_x+perp_x:.2f},{base_y+perp_y:.2f} {base_x-perp_x:.2f},{base_y-perp_y:.2f}" fill="{color}"/>')
+            elements.append(f'<text x="{label_x:.2f}" y="{label_y:.2f}" font-size="11" fill="{color}" font-weight="700" paint-order="stroke" stroke="white" stroke-width="3">{item["pid"]}</text>')
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+<rect width="100%" height="100%" fill="white"/>
+<text x="{width/2}" y="30" text-anchor="middle" font-size="18" font-family="Arial, sans-serif">{title}</text>
+<line x1="{left}" y1="{top+plot_h}" x2="{left+plot_w}" y2="{top+plot_h}" stroke="#333" stroke-width="1.2"/>
+<line x1="{left}" y1="{top}" x2="{left}" y2="{top+plot_h}" stroke="#333" stroke-width="1.2"/>
+{''.join(grid)}
+{''.join(elements)}
+{''.join(legend)}
+<text x="{left+plot_w/2}" y="{height-26}" text-anchor="middle" font-size="14">SNR (dB)</text>
+<text x="22" y="{top+plot_h/2}" text-anchor="middle" font-size="14" transform="rotate(-90 22 {top+plot_h/2})">{ylabel}</text>
+<text x="{left+plot_w+26}" y="{height-28}" font-size="11" fill="#555">dashed: CDD, solid: piecewise</text>
 </svg>
 '''
     path.write_text(svg, encoding="utf-8")
@@ -410,7 +632,7 @@ def run(args: argparse.Namespace) -> Path:
         write_csv(rows, out_dir / "pareto_link_curves_partial.csv")
         print(f"[done] SNR={snr_db:g} dB", flush=True)
 
-    write_analysis_outputs(rows, out_dir, fig_dir)
+    write_analysis_outputs(rows, out_dir, fig_dir, str(args.fig_prefix))
 
     with (out_dir / "run_config.json").open("w", encoding="utf-8") as f:
         json.dump(vars(args), f, indent=2, ensure_ascii=False)
@@ -432,7 +654,7 @@ def postprocess_from_partial(args: argparse.Namespace) -> Path:
         rows: List[Dict[str, object]] = list(csv.DictReader(f))
     if not rows:
         raise ValueError(f"No rows found in {partial_path}")
-    write_analysis_outputs(rows, out_dir, fig_dir)
+    write_analysis_outputs(rows, out_dir, fig_dir, str(args.fig_prefix))
 
     with (out_dir / "postprocess_config.json").open("w", encoding="utf-8") as f:
         json.dump(vars(args), f, indent=2, ensure_ascii=False)
@@ -476,7 +698,7 @@ def merge_csvs(args: argparse.Namespace) -> Path:
         rows_by_key.values(),
         key=lambda r: (family_order.get(str(r["family"]), 99), int(str(r["pareto_id"])[1:]), float(r["snr_db"])),
     )
-    write_analysis_outputs(rows, out_dir, fig_dir)
+    write_analysis_outputs(rows, out_dir, fig_dir, str(args.fig_prefix))
     completed = {
         "source_csvs": [str(s) for s in sources],
         "n_rows": len(rows),
@@ -500,6 +722,7 @@ def main() -> None:
     parser.add_argument("--pareto-csv", default="outputs/v_design_piecewise_tradeoff/v_design_piecewise_tradeoff_20260615_231257/pareto_front_labeled.csv")
     parser.add_argument("--out", default="outputs/v_design_pareto_link_curves")
     parser.add_argument("--fig-dir", default="docs/figures")
+    parser.add_argument("--fig-prefix", default="experiment19")
     parser.add_argument("--postprocess-from", default="")
     parser.add_argument("--merge-csvs", default="")
     parser.add_argument("--merge-output-dir", default="")

@@ -8,7 +8,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 import sys
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Sequence, Tuple
 
 import numpy as np
 
@@ -101,7 +101,66 @@ def plot_best_gains(rows: List[Dict[str, object]], path: Path, min_gain_db: floa
     plt.close(fig)
 
 
-def plot_alg3_gain_maps(rows: List[Dict[str, object]], snr_db: float, path: Path) -> None:
+def scenario_key(
+    delay_spread_ns: object,
+    cdd_delay_samples: object,
+    dmrs_spacing_sc: object,
+    snr_db: object,
+) -> Tuple[float, int, int, float]:
+    return (
+        float(delay_spread_ns),
+        int(float(cdd_delay_samples)),
+        int(float(dmrs_spacing_sc)),
+        float(snr_db),
+    )
+
+
+def read_csv(path: Path) -> List[Dict[str, object]]:
+    with path.open("r", encoding="utf-8", newline="") as f:
+        return [dict(row) for row in csv.DictReader(f)]
+
+
+def load_reusable_scenarios(
+    paths: Sequence[Path],
+    trials: int,
+    seed: int,
+    required_algorithms: Sequence[str],
+) -> Dict[Tuple[float, int, int, float], List[Dict[str, object]]]:
+    reusable: Dict[Tuple[float, int, int, float], List[Dict[str, object]]] = {}
+    required = set(required_algorithms)
+    for path in paths:
+        config_path = path.parent / "run_config.json"
+        if not path.exists() or not config_path.exists():
+            print(f"skip reuse source without CSV/config: {path}")
+            continue
+        with config_path.open("r", encoding="utf-8") as f:
+            config = json.load(f)
+        if int(config.get("trials", -1)) != int(trials) or int(config.get("seed", -1)) != int(seed):
+            print(f"skip reuse source with different trials/seed: {path}")
+            continue
+        grouped: Dict[Tuple[float, int, int, float], List[Dict[str, object]]] = {}
+        for row in read_csv(path):
+            key = scenario_key(
+                row["delay_spread_ns"],
+                row["cdd_delay_samples"],
+                row["dmrs_spacing_sc"],
+                row["snr_db"],
+            )
+            grouped.setdefault(key, []).append(row)
+        for key, scenario_rows in grouped.items():
+            by_algorithm = {str(row["algorithm"]): row for row in scenario_rows}
+            if required.issubset(by_algorithm):
+                reusable[key] = [by_algorithm[label] for label in required_algorithms]
+    return reusable
+
+
+def plot_gain_maps(
+    rows: List[Dict[str, object]],
+    algorithm: str,
+    snr_db: float,
+    path: Path,
+    color_limit_db: float,
+) -> None:
     os.environ.setdefault("MPLCONFIGDIR", "/tmp/cdd_lls_mplconfig")
     import matplotlib
 
@@ -110,7 +169,7 @@ def plot_alg3_gain_maps(rows: List[Dict[str, object]], snr_db: float, path: Path
 
     target = [
         r for r in rows
-        if r["algorithm"] == "Alg3 Port-DMRS RMMSE equal-total"
+        if r["algorithm"] == algorithm
         and abs(float(r["snr_db"]) - float(snr_db)) < 1e-9
     ]
     if not target:
@@ -118,11 +177,16 @@ def plot_alg3_gain_maps(rows: List[Dict[str, object]], snr_db: float, path: Path
     spacings = sorted({int(r["dmrs_spacing_sc"]) for r in target})
     delay_spreads = sorted({float(r["delay_spread_ns"]) for r in target})
     cdd_delays = sorted({int(r["cdd_delay_samples"]) for r in target})
-    fig, axes = plt.subplots(1, len(spacings), figsize=(4.8 * len(spacings), 4.4), sharey=True)
+    fig, axes = plt.subplots(
+        1,
+        len(spacings),
+        figsize=(5.0 * len(spacings), 4.8),
+        sharey=True,
+        constrained_layout=True,
+    )
     if len(spacings) == 1:
         axes = [axes]
-    vmax = max(abs(float(r["gain_vs_alg1_db"])) for r in target if np.isfinite(float(r["gain_vs_alg1_db"])))
-    vmax = max(0.5, min(8.0, vmax))
+    vmax = max(0.05, float(color_limit_db))
     for ax, sf in zip(axes, spacings):
         mat = np.full((len(delay_spreads), len(cdd_delays)), np.nan)
         for r in target:
@@ -131,7 +195,7 @@ def plot_alg3_gain_maps(rows: List[Dict[str, object]], snr_db: float, path: Path
             i = delay_spreads.index(float(r["delay_spread_ns"]))
             j = cdd_delays.index(int(r["cdd_delay_samples"]))
             mat[i, j] = float(r["gain_vs_alg1_db"])
-        im = ax.imshow(mat, origin="lower", aspect="auto", cmap="RdBu", vmin=-vmax, vmax=vmax)
+        im = ax.imshow(mat, origin="lower", aspect="auto", cmap="RdBu_r", vmin=-vmax, vmax=vmax)
         ax.set_title(f"DMRS spacing={sf} sc")
         ax.set_xticks(np.arange(len(cdd_delays)))
         ax.set_xticklabels(cdd_delays)
@@ -143,14 +207,147 @@ def plot_alg3_gain_maps(rows: List[Dict[str, object]], snr_db: float, path: Path
             for j in range(len(cdd_delays)):
                 val = mat[i, j]
                 if np.isfinite(val):
-                    ax.text(j, i, f"{val:.1f}", ha="center", va="center", fontsize=7)
+                    color = "white" if abs(val) >= 0.58 * vmax else "black"
+                    ax.text(j, i, f"{val:+.2f}", ha="center", va="center", fontsize=6.5, color=color)
     axes[0].set_ylabel("Delay spread (ns)")
     cbar = fig.colorbar(im, ax=axes, shrink=0.92)
-    cbar.set_label("Alg3 equal-total NMSE gain vs Alg1 (dB)")
-    fig.suptitle(f"Same-overhead Alg3 gain map @ SNR={snr_db:g} dB")
-    fig.tight_layout()
+    short_label = "Alg2 E99" if algorithm == "Alg2 Basis LMMSE E99" else "Alg3 equal-total"
+    cbar.set_label(f"{short_label} NMSE gain vs Alg1 (dB); blue=smaller, red=larger")
+    fig.suptitle(f"Same-overhead {short_label} gain map @ SNR={snr_db:g} dB")
     fig.savefig(path, dpi=180)
     plt.close(fig)
+
+
+def nmse_db(value: object) -> float:
+    linear = float(value)
+    if not np.isfinite(linear) or linear <= 0.0:
+        return float("nan")
+    return float(10.0 * np.log10(linear))
+
+
+def plot_absolute_nmse_maps(
+    rows: List[Dict[str, object]],
+    snr_db: float,
+    path: Path,
+    color_min_db: float,
+    color_max_db: float,
+) -> None:
+    os.environ.setdefault("MPLCONFIGDIR", "/tmp/cdd_lls_mplconfig")
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    algorithms = [
+        ("Alg2 Basis LMMSE E99", "Alg2 E99"),
+        ("Alg3 Port-DMRS RMMSE equal-total", "Alg3 equal-total"),
+    ]
+    target = [
+        row for row in rows
+        if str(row["algorithm"]) in {item[0] for item in algorithms}
+        and abs(float(row["snr_db"]) - float(snr_db)) < 1e-9
+    ]
+    if not target:
+        return
+    spacings = sorted({int(row["dmrs_spacing_sc"]) for row in target})
+    delay_spreads = sorted({float(row["delay_spread_ns"]) for row in target})
+    cdd_delays = sorted({int(row["cdd_delay_samples"]) for row in target})
+    fig, axes = plt.subplots(
+        len(algorithms),
+        len(spacings),
+        figsize=(5.0 * len(spacings), 8.7),
+        sharex=True,
+        sharey=True,
+        constrained_layout=True,
+    )
+    if len(spacings) == 1:
+        axes = np.asarray(axes).reshape(len(algorithms), 1)
+    im = None
+    span = max(float(color_max_db) - float(color_min_db), 1e-9)
+    for row_idx, (algorithm, short_label) in enumerate(algorithms):
+        for col_idx, spacing in enumerate(spacings):
+            ax = axes[row_idx, col_idx]
+            mat = np.full((len(delay_spreads), len(cdd_delays)), np.nan)
+            for item in target:
+                if str(item["algorithm"]) != algorithm or int(item["dmrs_spacing_sc"]) != spacing:
+                    continue
+                i = delay_spreads.index(float(item["delay_spread_ns"]))
+                j = cdd_delays.index(int(item["cdd_delay_samples"]))
+                mat[i, j] = nmse_db(item["ce_nmse_eff_mean"])
+            im = ax.imshow(
+                mat,
+                origin="lower",
+                aspect="auto",
+                cmap="RdYlBu_r",
+                vmin=float(color_min_db),
+                vmax=float(color_max_db),
+            )
+            if row_idx == 0:
+                ax.set_title(f"DMRS spacing={spacing} sc")
+            ax.set_xticks(np.arange(len(cdd_delays)))
+            ax.set_xticklabels(cdd_delays)
+            ax.set_yticks(np.arange(len(delay_spreads)))
+            ax.set_yticklabels([f"{value:g}" for value in delay_spreads])
+            if row_idx == len(algorithms) - 1:
+                ax.set_xlabel("CDD delay (samples)")
+            if col_idx == 0:
+                ax.set_ylabel(f"{short_label}\nDelay spread (ns)")
+            ax.grid(False)
+            for i in range(len(delay_spreads)):
+                for j in range(len(cdd_delays)):
+                    value = mat[i, j]
+                    if not np.isfinite(value):
+                        continue
+                    normalized = (value - float(color_min_db)) / span
+                    color = "white" if normalized <= 0.18 or normalized >= 0.82 else "black"
+                    ax.text(j, i, f"{value:.1f}", ha="center", va="center", fontsize=6.3, color=color)
+    cbar = fig.colorbar(im, ax=axes, shrink=0.94)
+    cbar.set_label("Absolute equivalent-channel NMSE (dB); blue=smaller, red=larger")
+    fig.suptitle(f"Alg2 / Alg3 absolute NMSE maps @ SNR={snr_db:g} dB")
+    fig.savefig(path, dpi=180)
+    plt.close(fig)
+
+
+def write_gain_map_table(rows: List[Dict[str, object]], path: Path) -> None:
+    labels = {
+        "Alg1 Direct RMMSE WB 576sc": "alg1",
+        "Alg2 Basis LMMSE E99": "alg2_e99",
+        "Alg3 Port-DMRS RMMSE equal-total": "alg3_equal_total",
+    }
+    grouped: Dict[Tuple[float, int, int, float], Dict[str, Dict[str, object]]] = {}
+    for row in rows:
+        label = str(row["algorithm"])
+        if label not in labels:
+            continue
+        key = scenario_key(
+            row["delay_spread_ns"],
+            row["cdd_delay_samples"],
+            row["dmrs_spacing_sc"],
+            row["snr_db"],
+        )
+        grouped.setdefault(key, {})[labels[label]] = row
+    table_rows: List[Dict[str, object]] = []
+    for key in sorted(grouped):
+        selected = grouped[key]
+        if not set(labels.values()).issubset(selected):
+            continue
+        ds, cdd, spacing, snr = key
+        table_rows.append({
+            "delay_spread_ns": ds,
+            "cdd_delay_samples": cdd,
+            "dmrs_spacing_sc": spacing,
+            "snr_db": snr,
+            "alg1_nmse": selected["alg1"]["ce_nmse_eff_mean"],
+            "alg1_nmse_db": nmse_db(selected["alg1"]["ce_nmse_eff_mean"]),
+            "alg2_e99_nmse": selected["alg2_e99"]["ce_nmse_eff_mean"],
+            "alg2_e99_nmse_db": nmse_db(selected["alg2_e99"]["ce_nmse_eff_mean"]),
+            "alg2_e99_gain_vs_alg1_db": selected["alg2_e99"]["gain_vs_alg1_db"],
+            "alg3_equal_total_nmse": selected["alg3_equal_total"]["ce_nmse_eff_mean"],
+            "alg3_equal_total_nmse_db": nmse_db(selected["alg3_equal_total"]["ce_nmse_eff_mean"]),
+            "alg3_equal_total_gain_vs_alg1_db": selected["alg3_equal_total"]["gain_vs_alg1_db"],
+            "trials": selected["alg1"]["trials"],
+        })
+    write_csv(table_rows, path)
 
 
 def run(args: argparse.Namespace) -> Path:
@@ -165,6 +362,28 @@ def run(args: argparse.Namespace) -> Path:
     dmrs_spacings = parse_int_list(args.dmrs_spacings)
     snrs = parse_float_list(args.snrs)
     basis_thresholds = parse_float_list(args.basis_thresholds)
+
+    direct_label = "Alg1 Direct RMMSE WB 576sc"
+    basis_labels = [f"Alg2 Basis LMMSE E{int(round(thr * 100))}" for thr in basis_thresholds]
+    block_label = "Alg2 CoherenceBlock Bc0.9"
+    alg3_label = "Alg3 Port-DMRS RMMSE equal-total"
+    required_algorithms = [direct_label, *basis_labels, block_label, alg3_label]
+    reuse_paths = [Path(x) for x in args.reuse_csv]
+    reusable = load_reusable_scenarios(
+        reuse_paths,
+        trials=int(args.trials),
+        seed=int(args.seed),
+        required_algorithms=required_algorithms,
+    )
+    requested_keys = {
+        scenario_key(ds, cdd, spacing, snr)
+        for ds in delay_spreads
+        for cdd in cdd_delays
+        for spacing in dmrs_spacings
+        for snr in snrs
+    }
+    reusable = {key: value for key, value in reusable.items() if key in requested_keys}
+    print(f"reusing {len(reusable)}/{len(requested_keys)} complete scenarios")
 
     all_rows: List[Dict[str, object]] = []
     win_rows: List[Dict[str, object]] = []
@@ -197,6 +416,17 @@ def run(args: argparse.Namespace) -> Path:
                 pilot_local = local_indices_for_subcarriers(grid, grid.pilot_subcarriers)
 
                 for snr_db in snrs:
+                    key = scenario_key(delay_spread_ns, cdd_delay, dmrs_spacing, snr_db)
+                    if key in reusable:
+                        scenario_rows = reusable[key]
+                        all_rows.extend(scenario_rows)
+                        win_rows.extend([
+                            r for r in scenario_rows
+                            if r["algorithm"] != direct_label
+                            and np.isfinite(float(r["gain_vs_alg1_db"]))
+                            and float(r["gain_vs_alg1_db"]) > 0.0
+                        ])
+                        continue
                     noise_var = 10.0 ** (-float(snr_db) / 10.0)
                     noise_var_ls = noise_var / float(len(resource.dmrs_symbol_indices))
                     direct = make_direct_estimator(grid, pdp, delays, noise_var_ls, float(args.loading))
@@ -308,6 +538,7 @@ def run(args: argparse.Namespace) -> Path:
                     ])
 
     write_csv(all_rows, out_dir / "same_overhead_nmse_search.csv")
+    write_gain_map_table(all_rows, out_dir / "unified_gain_map.csv")
     win_rows.sort(key=lambda r: float(r["gain_vs_alg1_db"]), reverse=True)
     write_csv(win_rows, out_dir / "same_overhead_wins.csv")
     with (out_dir / "run_config.json").open("w", encoding="utf-8") as f:
@@ -319,16 +550,57 @@ def run(args: argparse.Namespace) -> Path:
             "basis_thresholds": basis_thresholds,
             "trials": int(args.trials),
             "seed": int(args.seed),
+            "reused_scenarios": len(reusable),
+            "reuse_csv": [str(path) for path in reuse_paths],
+            "alg2_gain_map_definition": "Alg2 Basis LMMSE E99",
             "same_overhead_definition": "Alg3 uses equal-total FDM split, sum_m |P_m| = |P|; no equal-per-port extra-overhead curve is included.",
         }, f, indent=2)
 
-    plot_best_gains(all_rows, fig_dir / "experiment10_best_same_overhead_gains.png")
+    figure_prefix = str(args.figure_prefix)
+    plot_best_gains(all_rows, fig_dir / f"{figure_prefix}_best_same_overhead_gains.png")
+    map_algorithms = ["Alg2 Basis LMMSE E99", "Alg3 Port-DMRS RMMSE equal-total"]
+    color_limits = {}
+    for algorithm in map_algorithms:
+        values = [
+            abs(float(r["gain_vs_alg1_db"]))
+            for r in all_rows
+            if r["algorithm"] == algorithm and np.isfinite(float(r["gain_vs_alg1_db"]))
+        ]
+        color_limits[algorithm] = max(values) if values else 1.0
+    absolute_nmse_values = [
+        nmse_db(row["ce_nmse_eff_mean"])
+        for row in all_rows
+        if row["algorithm"] in map_algorithms
+    ]
+    absolute_nmse_values = [value for value in absolute_nmse_values if np.isfinite(value)]
+    absolute_color_min = min(absolute_nmse_values) if absolute_nmse_values else -30.0
+    absolute_color_max = max(absolute_nmse_values) if absolute_nmse_values else 0.0
     for snr in snrs:
         if abs(snr - round(snr)) < 1e-9:
             suffix = str(int(round(snr))).replace("-", "m")
         else:
             suffix = str(snr).replace("-", "m").replace(".", "p")
-        plot_alg3_gain_maps(all_rows, snr, fig_dir / f"experiment10_alg3_gain_map_snr{suffix}.png")
+        plot_gain_maps(
+            all_rows,
+            "Alg2 Basis LMMSE E99",
+            snr,
+            fig_dir / f"{figure_prefix}_alg2_e99_gain_map_snr{suffix}.png",
+            color_limits["Alg2 Basis LMMSE E99"],
+        )
+        plot_gain_maps(
+            all_rows,
+            "Alg3 Port-DMRS RMMSE equal-total",
+            snr,
+            fig_dir / f"{figure_prefix}_alg3_gain_map_snr{suffix}.png",
+            color_limits["Alg3 Port-DMRS RMMSE equal-total"],
+        )
+        plot_absolute_nmse_maps(
+            all_rows,
+            snr,
+            fig_dir / f"{figure_prefix}_alg2_alg3_absolute_nmse_map_snr{suffix}.png",
+            absolute_color_min,
+            absolute_color_max,
+        )
 
     print(out_dir)
     return out_dir
@@ -346,6 +618,8 @@ def main() -> None:
     parser.add_argument("--trials", type=int, default=50)
     parser.add_argument("--seed", type=int, default=20260612)
     parser.add_argument("--loading", type=float, default=1e-8)
+    parser.add_argument("--reuse-csv", action="append", default=[])
+    parser.add_argument("--figure-prefix", default="experiment10")
     run(parser.parse_args())
 
 

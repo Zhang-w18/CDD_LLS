@@ -453,6 +453,56 @@ def coherence_rows(args: argparse.Namespace, out_dir: Path) -> List[Dict[str, ob
     return rows
 
 
+def plot_frequency_correlation(args: argparse.Namespace, out_dir: Path, path: Path) -> None:
+    resource = resource_for_spacing(args, parse_int_list(args.dmrs_spacings)[0])
+    grid = build_resource_grid(resource)
+    sample_period_ns = 1e9 / (float(resource.n_fft) * float(resource.scs_khz) * 1e3)
+    pdp = make_exponential_pdp(float(args.delay_spread_ns), sample_period_ns, float(args.max_delay_factor))
+    pdp_eff = shifted_pdp(pdp, [0, int(args.cdd_delay)])
+    deltas = np.arange(int(grid.n_sc), dtype=np.int64)
+    rho_h = freq_corr_from_pdp(pdp, grid.n_fft, grid.n_sc - 1)
+    rho_g = freq_corr_from_pdp(pdp_eff, grid.n_fft, grid.n_sc - 1)
+    write_csv(
+        [
+            {
+                "delta_subcarriers": int(d),
+                "rho_physical_branch_H": float(rh),
+                "rho_cdd_equivalent_g": float(rg),
+            }
+            for d, rh, rg in zip(deltas, rho_h, rho_g)
+        ],
+        out_dir / "frequency_correlation_cdd128.csv",
+    )
+
+    os.environ.setdefault("MPLCONFIGDIR", "/tmp/cdd_lls_mplconfig")
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 2, figsize=(12.2, 4.8), sharey=True)
+    for ax, xmax in zip(axes, [int(grid.n_sc - 1), 120]):
+        ax.plot(deltas, rho_h, linewidth=1.45, label="Physical branch H")
+        ax.plot(deltas, rho_g, linewidth=1.45, label=f"CDD equivalent g, d={int(args.cdd_delay)}")
+        ax.axhline(0.9, color="black", linestyle=":", linewidth=0.8)
+        ax.axhline(0.5, color="black", linestyle="--", linewidth=0.8)
+        ax.set_xlim(0, xmax)
+        ax.set_ylim(0, 1.02)
+        ax.set_xlabel("Subcarrier spacing Δk (RE)")
+        ax.grid(True, alpha=0.3)
+    axes[0].set_title("Full 576-subcarrier allocation", fontsize=10)
+    axes[1].set_title("Zoom near Δk=0", fontsize=10)
+    axes[0].set_ylabel("|R(Δk)| from PDP Fourier transform")
+    axes[1].legend(fontsize=8, loc="upper right")
+    fig.suptitle(
+        f"Frequency correlation, DS={float(args.delay_spread_ns):g} ns, CDD d={int(args.cdd_delay)}",
+        fontsize=11,
+    )
+    fig.tight_layout()
+    fig.savefig(path, dpi=180)
+    plt.close(fig)
+
+
 def plot_nmse_vs_spacing(rows: List[Dict[str, object]], path: Path) -> None:
     os.environ.setdefault("MPLCONFIGDIR", "/tmp/cdd_lls_mplconfig")
     import matplotlib
@@ -583,6 +633,7 @@ def run(args: argparse.Namespace) -> Path:
     fig_dir.mkdir(parents=True, exist_ok=True)
 
     coh = coherence_rows(args, out_dir)
+    plot_frequency_correlation(args, out_dir, fig_dir / "experiment19_cdd128_frequency_correlation.png")
     nmse_rows, nmse_gain_rows = run_nmse_sweep(args, out_dir)
     bler_rows, target_rows = run_bler_sweep(args, out_dir)
     bler_gain_rows = make_bler_gain_rows(bler_rows, target_rows, out_dir)
