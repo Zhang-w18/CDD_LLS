@@ -122,34 +122,41 @@ def plot_bler(rows: List[Dict[str, object]], path: Path) -> None:
     from matplotlib.ticker import MultipleLocator
 
     colors = {
-        1.0: "#0072B2",
-        10.0: "#D55E00",
-        100.0: "#009E73",
+        6: "#0072B2",
+        12: "#D55E00",
+        18: "#C44E52",
+        24: "#009E73",
     }
     styles = {
-        ALG1: {"linestyle": (0, (5, 2)), "marker": "s"},
-        ALG3: {"linestyle": "-", "marker": "o"},
+        ALG1: {"linestyle": (0, (5, 2))},
+        ALG3: {"linestyle": "-"},
+    }
+    ds_markers = {
+        1.0: "o",
+        10.0: "s",
+        100.0: "^",
     }
     max_trials = max(int(float(row["n_trials"])) for row in rows)
     zero_floor = 0.5 / float(max_trials)
     fig, ax = plt.subplots(figsize=(11.5, 6.8))
-    for delay_spread in sorted({float(row["delay_spread_ns"]) for row in rows}):
-        spacings = sorted({
-            int(float(row["dmrs_spacing_sc"]))
+    for spacing in sorted({int(float(row["dmrs_spacing_sc"])) for row in rows}):
+        for delay_spread in sorted({
+            float(row["delay_spread_ns"])
             for row in rows
-            if float(row["delay_spread_ns"]) == delay_spread
-        })
-        for spacing in spacings:
+            if int(float(row["dmrs_spacing_sc"])) == spacing
+        }):
             for algorithm in (ALG1, ALG3):
                 points = sorted(
                     [
                         row for row in rows
-                        if float(row["delay_spread_ns"]) == delay_spread
-                        and int(float(row["dmrs_spacing_sc"])) == spacing
+                        if int(float(row["dmrs_spacing_sc"])) == spacing
+                        and float(row["delay_spread_ns"]) == delay_spread
                         and str(row["algorithm"]) == algorithm
                     ],
                     key=lambda row: float(row["snr_db"]),
                 )
+                if not points:
+                    continue
                 ys = [
                     max(float(row["bler"]), 0.5 / float(row["n_trials"]))
                     for row in points
@@ -158,14 +165,14 @@ def plot_bler(rows: List[Dict[str, object]], path: Path) -> None:
                 ax.semilogy(
                     [float(row["snr_db"]) for row in points],
                     ys,
-                    color=colors.get(delay_spread),
+                    color=colors.get(spacing, "#333333"),
                     linewidth=1.8,
-                    markersize=5.2,
+                    markersize=5.6,
                     linestyle=styles[algorithm]["linestyle"],
-                    marker=styles[algorithm]["marker"],
-                    markerfacecolor="none" if spacing == 12 else colors.get(delay_spread),
+                    marker=ds_markers.get(delay_spread, "o"),
+                    markerfacecolor=colors.get(spacing, "#333333"),
                     markeredgewidth=1.2,
-                    label=f"DS={delay_spread:g} | sp={spacing} | {label_alg}",
+                    label=f"sp={spacing} | DS={delay_spread:g} | {label_alg}",
                 )
     ax.axhline(0.01, color="#555555", linewidth=1.0, linestyle=":", label="BLER=0.01")
     ax.set_ylim(max(zero_floor / 1.6, 1e-4), 1.08)
@@ -192,7 +199,7 @@ def plot_bler(rows: List[Dict[str, object]], path: Path) -> None:
     ax.grid(True, which="major", axis="x", color="#777777", linewidth=0.7, alpha=0.36)
     ax.grid(True, which="minor", axis="x", color="#999999", linewidth=0.55, linestyle=":", alpha=0.24)
     ax.grid(True, which="both", axis="y", alpha=0.24)
-    ax.legend(ncol=2, fontsize=7.8, loc="best", handlelength=3.2, markerscale=1.05)
+    ax.legend(ncol=2, fontsize=7.4, loc="best", handlelength=3.2, markerscale=1.05)
     fig.tight_layout()
     fig.savefig(path, dpi=190)
     plt.close(fig)
