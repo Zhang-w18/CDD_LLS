@@ -2,6 +2,15 @@
 
 这是基于 Sionna LDPC 的 QC 显式 CDD 链路级仿真平台第一版。平台复用 `lls_platform_slm` 的工程风格：YAML 配置驱动、`run.py` 统一入口、CSV/JSON/PNG 输出。
 
+## 研究工作流
+
+本项目采用迭代式研究工作流，详见 `CLAUDE.md`。核心文档：
+
+- [`GOALS.md`](GOALS.md)：研究目标与当前阶段验收标准。
+- [`KNOWLEDGE.md`](KNOWLEDGE.md)：已沉淀结论、开放问题（唯一记忆体，持续更新）。
+- `research/plan-NNN.md` / `research/result-NNN.md`：每轮自包含仿真计划与结构化结果摘要，最新编号从 022 开始。
+- `docs/archive/`：历史长文档（QC 复现计划书、V 矩阵理论、实验 1-21 完整记录、英文综合报告），仅按需查阅，日常迭代不重读。
+
 ## 环境
 
 优先复用本机已有 Sionna 环境：
