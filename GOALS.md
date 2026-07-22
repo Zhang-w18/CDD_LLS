@@ -1,34 +1,66 @@
 # 研究目标
 
-## 北极星问题
+## 1. 总体研究问题
 
-能否设计一个频域相位预编码矩阵 `V`（CDD 是其中一种特例）及配套信道估计算法，在**相同 DMRS 开销**下，同时获得比传统全带 CDD + direct RMMSE 更好的分集增益和更低的 estimated-CSI BLER？还是说 CDD 已经是这个折中问题的实践最优解？
+能否设计频域相位预编码矩阵 `\mathbf V` 及配套信道估计方法，在相同 DMRS 开销下，相对等差 CDD 获得更低的 estimated-CSI BLER，并明确结论成立的物理信道、带宽、接收机知识和失配范围？
 
-> 顶层理论框架、`V` 的设计空间与候选结构（分段线性/chirp/平滑随机相位/frame 设计）、理论命题见 **`DESIGN.md`**。本文件只写目标与阶段验收；做战略规划时对照 `DESIGN.md`。
+`\mathbf V` 是有效子载波到发射分支的恒模频域相位矩阵，CDD 是其线性相位特例。系统模型和符号见 `DESIGN.md`。
 
-## 背景（一句话版本，细节见 `docs/archive/`）
+## 2. 背景
 
-- QC 提案：显式 CDD 相位连续，允许 UE 做 wideband channel estimation，相对 PRG-level precoder cycling 有分集增益；本项目已复现该趋势并建好 link-level 仿真平台（Sionna LDPC，2Tx/4Tx/8Tx→4Rx/1Rx，TDL 信道，可配置 CE 算法）。
-- 在此基础上把问题推广到任意频域相位矩阵 `V`：`V` 的列正交性（分集）和频域平滑性（信道估计处理增益）天然冲突。CDD 是"每个分支只有一个全带固定 delay"约束下的自然最优解，但不是一般相位矩阵空间里的全局最优。
+项目已建立 Sionna LDPC 链路级仿真平台，支持 static TDL、2/4/8 Tx、1/4 Rx、CDD/PRG/一般 `\mathbf V`、多种信道估计器以及 ideal-CSI 和 estimated-CSI BLER。
 
-## 当前阶段（从 plan-022 起）
+既有实验说明：矩阵指标和 ideal-CSI 增益不能替代真实 DMRS 条件下的估计与 BLER；分段线性 N-series 在已测稀疏导频 estimated-CSI 条件下整体劣化；改变参考信号结构时必须核算 DMRS 开销。详见 `KNOWLEDGE.md`。
 
-上一阶段（实验 1–21，详见 `KNOWLEDGE.md`）证明了：分段线性相位 N-series 设计确实能在**矩阵层面**和 **ideal-CSI BLER** 上超过 CDD，但这个优势在**稀疏导频 + Algorithm 1 RMMSE** 的 estimated-CSI 链路上消失甚至倒扣。
+## 3. result-024 后的进展
 
-当前阶段目标：不再只用矩阵指标（log-det、B_0.5）筛选 `V`，而是把导频可估计性直接纳入设计目标，验证联合目标
+固定 4RB V-agnostic 接收机下，CC/CN 分段候选没有支配透明 CDD/PRG 基线。接收机获得分段边界后，48 PRB 仍无候选通过，24 PRB 仅有一个半透明诊断点通过。该方向当前不作为主要后续方向。
 
-```
-J(V) = J_div(V) - mu * L_CE(V; 实际DMRS pattern)
-```
+在 48 PRB、8 Tx / 1 Rx、平坦分支信道、DMRS comb 24、相同开销和双方 matched LMMSE 条件下，Sidon delay 索引 `[0,1,3,7,12,20,30,65]` 相对等差 QC CDD：
 
-是否能筛出「ideal-CSI 分集增益保留、estimated-CSI BLER 不倒扣」的候选。
+- 10% BLER 所需 SNR 改善 0.33 dB，保守 95% 区间 [0.20, 0.45] dB；
+- 1% BLER 所需 SNR 改善 0.85 dB，保守 95% 区间 [0.63, 1.07] dB；
+- matched CE NMSE 最大差 0.06 dB。
 
-## 验收标准（决定本阶段成败）
+因此，“存在一般 `\mathbf V` 在同 DMRS 开销下优于等差 CDD”的假设已在上述限定条件内成立。该结论不能直接推广到频率选择性 TDL、定时误差、协方差失配、其他带宽或移动信道。
 
-- **假设成立**：存在候选 `V`，在与 CDD 相同 DMRS 开销/密度下，estimated-CSI 10% BLER 所需 SNR 不高于最优 CDD 参考点（容差 ±0.2 dB，即在 400-trial 分辨率内不可分辨也算持平）。
-- **假设不成立**：扫描过 `mu` 的合理范围（见 plan-022）后，所有候选的 estimated-CSI BLER 仍全部劣于 CDD → 结论固化为"CDD 在当前稀疏导频体制下是实践最优"，转向探索联合优化 DMRS pattern 本身（而不只是 `V`）。
+## 4. 当前阶段目标
 
-## 不在当前阶段范围内
+验证 Sidon 优势的稳健性，并确定适用范围：
 
-- UE 移动性 / Doppler / time-varying TDL（仍是 Phase B，未启动）。
-- 宽带 massive-MIMO 预编码降维到 effective ports 后再叠加 CDD（后续扩展方向，未启动）。
+1. 在 5–100 ns 物理 PDP 下检查导频可辨识性、条件数和闭式 NMSE；
+2. 对通过低成本检查的条件运行 estimated-CSI BLER；
+3. 检查协方差失配和定时误差；
+4. 检查 24 / 36 / 48 PRB；
+5. 汇总保持优势、持平和反向的条件。
+
+新 plan 的阈值、PDP 集合、trial 数和停止条件必须在实施前与研究者确认。
+
+## 5. 阶段验收要求
+
+1. 与等差 QC CDD 使用相同 DMRS、开销、MCS、trial 和随机样本；
+2. 每个条件报告 10% BLER，样本允许时报告 1% BLER；
+3. 报告错误块计数、目标 SNR 方法和置信区间；
+4. 同时报告导频矩阵条件数或最小奇异值、matched CE NMSE 和 BLER；
+5. 区分 matched 与 mismatched 接收机；
+6. 报告全部预先规定条件；
+7. 完成稳健性检查前，结论必须包含当前限定条件。
+
+判定分为：
+
+- **稳健成立**：主要预定条件内，10% BLER 优势统计区间保持为正且无未解释 CE 失稳；
+- **条件成立**：只在部分条件保持优势，明确条件集合和失效条件；
+- **不成立**：主要实际条件下优势稳定反向，更新 `KNOWLEDGE.md` 并停止把该 Sidon 集作为主要候选。
+
+具体数值门槛由下一份经研究者确认的 plan 固定，不得在看到正式结果后修改。
+
+## 6. 暂不纳入本阶段
+
+- UE 移动性、Doppler、time-varying TDL；
+- massive-MIMO 预编码降维后再叠加 CDD；
+- 标准化、信令开销和硬件实现评估；
+- 新候选大规模搜索。
+
+## 7. 最新证据
+
+`research/plan-024.md`、`research/result-024.md`、`research/result-024-text.md`、`outputs/experiment024_segment_sidon_qc/20260716_main/`。

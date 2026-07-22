@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Sequence
 import os
+from pathlib import Path
+import tempfile
 import numpy as np
 
 
@@ -44,7 +46,7 @@ class SionnaLDPCAdapter:
     @staticmethod
     def _import_ldpc():
         os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
-        os.environ.setdefault("MPLCONFIGDIR", "/private/tmp/cdd_lls_matplotlib")
+        os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "cdd_lls_matplotlib"))
         os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
         import tensorflow as tf
 

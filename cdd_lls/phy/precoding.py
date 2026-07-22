@@ -79,7 +79,13 @@ def build_precoder(
         return PrecoderResult(
             C=C.astype(np.complex128),
             label=scheme,
-            metadata={"cdd_delay_vector": delays},
+            metadata={
+                "cdd_delay_vector": delays,
+                "cdd_delay_seconds": [
+                    float(x) / (float(grid.n_fft) * float(grid.scs_khz) * 1e3)
+                    for x in delays
+                ],
+            },
         )
 
     if scheme in ("PRG_CYCLING_4RB", "PRG_CYCLING"):
@@ -111,15 +117,24 @@ def build_precoder(
 def equivalent_channel(H: np.ndarray, C: np.ndarray) -> np.ndarray:
     H_arr = np.asarray(H, dtype=np.complex128)
     C_arr = np.asarray(C, dtype=np.complex128)
-    if H_arr.ndim != 3:
-        raise ValueError("H must have shape [n_rx,n_tx,n_sc].")
-    if C_arr.shape != (H_arr.shape[2], H_arr.shape[1]):
-        raise ValueError("C must have shape [n_sc,n_tx].")
-    return np.einsum("rmk,km->rk", H_arr, C_arr, optimize=True)
+    if H_arr.ndim == 3:
+        if C_arr.shape != (H_arr.shape[2], H_arr.shape[1]):
+            raise ValueError("C must have shape [n_sc,n_tx].")
+        return np.einsum("rmk,km->rk", H_arr, C_arr, optimize=True)
+    if H_arr.ndim == 4:
+        if C_arr.shape != (H_arr.shape[3], H_arr.shape[1]):
+            raise ValueError("C must have shape [n_sc,n_tx].")
+        return np.einsum("rmsk,km->rsk", H_arr, C_arr, optimize=True)
+    if H_arr.ndim == 5:
+        if C_arr.shape != (H_arr.shape[4], H_arr.shape[2]):
+            raise ValueError("C must have shape [n_sc,n_tx].")
+        return np.einsum("brmsk,km->brsk", H_arr, C_arr, optimize=True)
+    raise ValueError("H must have shape [rx,tx,sc], [rx,tx,symbol,sc], or [batch,rx,tx,symbol,sc].")
 
 
 def cdd_equivalent_from_branches(H: np.ndarray, grid: ResourceGrid, delays: List[int]) -> np.ndarray:
-    n_tx = int(H.shape[1])
+    h_arr = np.asarray(H)
+    n_tx = int(h_arr.shape[2] if h_arr.ndim == 5 else h_arr.shape[1])
     d = np.asarray(normalize_delay_vector(delays, n_tx=n_tx), dtype=np.float64)
     C = np.exp(
         -1j

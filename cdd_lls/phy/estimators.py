@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Dict, List, Optional
 import numpy as np
 
-from cdd_lls.core.config import ChannelEstimationConfig, ResourceConfig
+from cdd_lls.core.config import ChannelConfig, ChannelEstimationConfig, ResourceConfig
 from cdd_lls.phy.precoding import cdd_equivalent_from_branches, normalize_delay_vector
 from cdd_lls.phy.resource_grid import ResourceGrid, local_indices_for_subcarriers
 
@@ -18,6 +19,197 @@ class EstimationResult:
     cond_number: float = float("nan")
     effective_rank: float = float("nan")
     metadata: Dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class TDLTimeFrequencyCovariance:
+    time: np.ndarray
+    frequency: np.ndarray
+    covariance_type: str
+
+
+@dataclass(frozen=True)
+class TimeFrequencyRMMSEFilter:
+    weights: np.ndarray
+    pilot_coordinates: np.ndarray
+    data_coordinates: np.ndarray
+    noise_variance: float
+    condition_number: float
+    numerical_jitter: float
+    covariance_type: str
+
+    def estimate_data(self, ls_observations: np.ndarray) -> np.ndarray:
+        obs = np.asarray(ls_observations, dtype=np.complex128)
+        if obs.shape[-1] != self.weights.shape[1]:
+            raise ValueError(
+                f"LS observation has {obs.shape[-1]} pilot REs; expected {self.weights.shape[1]}."
+            )
+        original = obs.shape[:-1]
+        flat = obs.reshape(-1, obs.shape[-1])
+        estimated = flat @ self.weights.T
+        return estimated.reshape(*original, self.weights.shape[0])
+
+
+@lru_cache(maxsize=32)
+def _cached_tdl_base_time_frequency_covariance(
+    profile: str,
+    subcarrier_spacing_hz: float,
+    n_fft: int,
+    delay_spread_s: float,
+    speed_mps: float,
+    carrier_frequency_hz: float,
+    ofdm_symbol_duration_s: float,
+    n_symbols: int,
+    active_fft_indices: tuple[int, ...],
+) -> tuple[np.ndarray, np.ndarray]:
+    from sionna.phy.ofdm import tdl_freq_cov_mat, tdl_time_cov_mat
+
+    if profile not in ("A", "B", "C", "D", "E"):
+        raise ValueError("Sionna covariance helpers support TDL profiles A through E.")
+    rf_full = np.asarray(
+        tdl_freq_cov_mat(
+            model=profile,
+            subcarrier_spacing=float(subcarrier_spacing_hz),
+            fft_size=int(n_fft),
+            delay_spread=float(delay_spread_s),
+            precision="double",
+        ).numpy(),
+        dtype=np.complex128,
+    )
+    active = np.asarray(active_fft_indices, dtype=np.int64)
+    rf = rf_full[np.ix_(active, active)]
+    rt = np.asarray(
+        tdl_time_cov_mat(
+            model=profile,
+            speed=float(speed_mps),
+            carrier_frequency=float(carrier_frequency_hz),
+            ofdm_symbol_duration=float(ofdm_symbol_duration_s),
+            num_ofdm_symbols=int(n_symbols),
+            precision="double",
+        ).numpy(),
+        dtype=np.complex128,
+    )
+    return rt, rf
+
+
+def _tdl_base_time_frequency_covariance(
+    grid: ResourceGrid,
+    channel: ChannelConfig,
+) -> tuple[np.ndarray, np.ndarray]:
+    return _cached_tdl_base_time_frequency_covariance(
+        str(channel.tdl_profile).upper(),
+        float(grid.scs_khz) * 1e3,
+        int(grid.n_fft),
+        float(channel.delay_spread_ns) * 1e-9,
+        float(channel.ue_speed_kmh) / 3.6,
+        float(channel.carrier_frequency_hz),
+        float(grid.ofdm_symbol_duration_s),
+        int(grid.n_symbols),
+        tuple(int(x) for x in grid.active_fft_indices),
+    )
+
+
+def tdl_unknown_delay_covariance(
+    grid: ResourceGrid,
+    channel: ChannelConfig,
+) -> TDLTimeFrequencyCovariance:
+    """Return the baseline TDL covariance without accepting true CDD delays."""
+    rt, rf = _tdl_base_time_frequency_covariance(grid, channel)
+    return TDLTimeFrequencyCovariance(rt, rf, "tdl_unknown_delay")
+
+
+def tdl_known_delay_covariance(
+    grid: ResourceGrid,
+    channel: ChannelConfig,
+    delays: List[int],
+) -> TDLTimeFrequencyCovariance:
+    rt, rf = _tdl_base_time_frequency_covariance(grid, channel)
+    normalized = normalize_delay_vector(delays, n_tx=len(delays))
+    k = np.asarray(grid.subcarrier_indices, dtype=np.float64)
+    delta = k[:, None] - k[None, :]
+    d = np.asarray(normalized, dtype=np.float64)
+    cdd_factor = np.mean(
+        np.exp(-1j * 2.0 * np.pi * delta[:, :, None] * d[None, None, :] / float(grid.n_fft)),
+        axis=2,
+    )
+    return TDLTimeFrequencyCovariance(rt, rf * cdd_factor, "tdl_cdd_known_delay")
+
+
+def coordinate_covariance(
+    grid: ResourceGrid,
+    time_covariance: np.ndarray,
+    frequency_covariance: np.ndarray,
+    coordinates_a: np.ndarray,
+    coordinates_b: np.ndarray,
+) -> np.ndarray:
+    a = np.asarray(coordinates_a, dtype=np.int64)
+    b = np.asarray(coordinates_b, dtype=np.int64)
+    if a.ndim != 2 or b.ndim != 2 or a.shape[1] != 2 or b.shape[1] != 2:
+        raise ValueError("Coordinates must have shape [n_re,2] as (symbol,subcarrier).")
+    a_local = local_indices_for_subcarriers(grid, a[:, 1])
+    b_local = local_indices_for_subcarriers(grid, b[:, 1])
+    return (
+        np.asarray(time_covariance)[np.ix_(a[:, 0], b[:, 0])]
+        * np.asarray(frequency_covariance)[np.ix_(a_local, b_local)]
+    )
+
+
+def build_time_frequency_rmmse_filter(
+    grid: ResourceGrid,
+    covariance: TDLTimeFrequencyCovariance,
+    noise_variance: float,
+    diagonal_loading: float = 0.0,
+) -> TimeFrequencyRMMSEFilter:
+    pilot = np.asarray(grid.pilot_coordinates, dtype=np.int64)
+    data = np.asarray(grid.data_coordinates, dtype=np.int64)
+    r_pp = coordinate_covariance(grid, covariance.time, covariance.frequency, pilot, pilot)
+    r_dp = coordinate_covariance(grid, covariance.time, covariance.frequency, data, pilot)
+    jitter = max(float(diagonal_loading), 0.0)
+    identity = np.eye(len(pilot), dtype=np.complex128)
+    system = r_pp + (float(noise_variance) + jitter) * identity
+    for _ in range(8):
+        try:
+            chol = np.linalg.cholesky(system)
+            break
+        except np.linalg.LinAlgError:
+            jitter = max(1e-14, 10.0 * jitter)
+            system = r_pp + (float(noise_variance) + jitter) * identity
+    else:
+        raise np.linalg.LinAlgError("RMMSE pilot covariance is not numerically positive definite.")
+    solved = np.linalg.solve(chol, r_dp.conj().T)
+    solved = np.linalg.solve(chol.conj().T, solved)
+    weights = solved.conj().T
+    return TimeFrequencyRMMSEFilter(
+        weights=weights,
+        pilot_coordinates=pilot,
+        data_coordinates=data,
+        noise_variance=float(noise_variance),
+        condition_number=float(np.linalg.cond(system)),
+        numerical_jitter=float(jitter),
+        covariance_type=str(covariance.covariance_type),
+    )
+
+
+def linear_estimator_closed_form_nmse(
+    grid: ResourceGrid,
+    estimator: TimeFrequencyRMMSEFilter,
+    true_covariance: TDLTimeFrequencyCovariance,
+    noise_variance: float,
+) -> float:
+    pilot = np.asarray(grid.pilot_coordinates, dtype=np.int64)
+    data = np.asarray(grid.data_coordinates, dtype=np.int64)
+    r_pp = coordinate_covariance(grid, true_covariance.time, true_covariance.frequency, pilot, pilot)
+    r_dp = coordinate_covariance(grid, true_covariance.time, true_covariance.frequency, data, pilot)
+    w = np.asarray(estimator.weights, dtype=np.complex128)
+    data_t_diag = np.real(np.diag(true_covariance.time)[data[:, 0]])
+    data_k_local = local_indices_for_subcarriers(grid, data[:, 1])
+    data_f_diag = np.real(np.diag(true_covariance.frequency)[data_k_local])
+    signal_power = float(np.sum(data_t_diag * data_f_diag))
+    cross = np.sum(w * r_dp.conj())
+    observation_covariance = r_pp + float(noise_variance) * np.eye(len(pilot), dtype=np.complex128)
+    estimate_power = np.sum((w @ observation_covariance) * w.conj())
+    mse = signal_power - 2.0 * float(np.real(cross)) + float(np.real(estimate_power))
+    return mse / signal_power
 
 
 def shifted_pdp(pdp: np.ndarray, delays: List[int]) -> np.ndarray:

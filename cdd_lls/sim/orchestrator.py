@@ -15,14 +15,32 @@ from cdd_lls.core.config import (
     save_resolved_config,
 )
 from cdd_lls.core.mcs import build_tb_layout, get_mcs
-from cdd_lls.phy.channel_tdl import generate_tdl_channel
-from cdd_lls.phy.estimators import estimate_channel
+from cdd_lls.phy.channel_tdl import generate_sionna_tdl_channel, generate_tdl_channel
+from cdd_lls.phy.estimators import (
+    build_time_frequency_rmmse_filter,
+    estimate_channel,
+    tdl_known_delay_covariance,
+    tdl_unknown_delay_covariance,
+)
 from cdd_lls.phy.ldpc import SionnaLDPCAdapter
 from cdd_lls.phy.precoding import build_precoder, equivalent_channel, normalize_delay_vector
 from cdd_lls.phy.qam import qam_demapper_maxlog, qam_modulate
 from cdd_lls.phy.resource_grid import build_resource_grid, local_indices_for_subcarriers
 from cdd_lls.sim.stats import interpolate_target_snr, save_csv, save_json, snr_values
 from cdd_lls.utils.plotting import plot_bler, plot_nmse
+
+
+def construct_ls_observations(
+    true_pilot_channel: np.ndarray,
+    noise_variance: float,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Construct z=g+w after division by unit-power known DMRS symbols."""
+    true_pilot = np.asarray(true_pilot_channel, dtype=np.complex128)
+    noise = math.sqrt(float(noise_variance) / 2.0) * (
+        rng.normal(size=true_pilot.shape) + 1j * rng.normal(size=true_pilot.shape)
+    )
+    return true_pilot + noise
 
 
 class CDDLinkLevelOrchestrator:
@@ -49,7 +67,11 @@ class CDDLinkLevelOrchestrator:
 
     def _make_output_dir(self) -> Path:
         root = Path(self.cfg.simulation.output_dir)
-        stamp = dt.datetime.now().strftime("sim_%Y%m%d_%H%M%S")
+        stamp = (
+            str(self.cfg.simulation.run_id)
+            if self.cfg.simulation.run_id
+            else dt.datetime.now().strftime("sim_%Y%m%d_%H%M%S")
+        )
         out = root / stamp
         out.mkdir(parents=True, exist_ok=True)
         return out
@@ -106,7 +128,8 @@ class CDDLinkLevelOrchestrator:
             int(cfg.transmission.cdd_base_delay),
         )
 
-        for snr_db in snr_values(cfg.simulation.snr_range_db):
+        configured_snr = list(getattr(cfg.simulation, "snr_points_db", []) or [])
+        for snr_db in (configured_snr if configured_snr else snr_values(cfg.simulation.snr_range_db)):
             row = self._run_snr(
                 cfg=cfg,
                 grid=grid,
@@ -134,6 +157,19 @@ class CDDLinkLevelOrchestrator:
         tb,
         qm: int,
     ) -> Dict[str, object]:
+        if str(getattr(cfg.channel, "backend", "legacy_exponential")).lower() == "sionna_tdl":
+            return self._run_snr_sionna_tdl(
+                cfg=cfg,
+                grid=grid,
+                adapter=adapter,
+                scenario_id=scenario_id,
+                variant_id=variant_id,
+                tx_scheme=tx_scheme,
+                delays=delays,
+                snr_db=snr_db,
+                tb=tb,
+                qm=qm,
+            )
         if bool(getattr(cfg.simulation, "common_random_numbers", True)):
             seed = self._stable_seed(cfg.simulation.seed, scenario_id, snr_db)
         else:
@@ -258,6 +294,144 @@ class CDDLinkLevelOrchestrator:
         })
         return row
 
+    def _run_snr_sionna_tdl(
+        self,
+        cfg: PlatformConfig,
+        grid,
+        adapter: SionnaLDPCAdapter,
+        scenario_id: str,
+        variant_id: str,
+        tx_scheme: str,
+        delays: List[int],
+        snr_db: float,
+        tb,
+        qm: int,
+    ) -> Dict[str, object]:
+        if bool(getattr(cfg.simulation, "common_random_numbers", True)):
+            seed = self._stable_seed(cfg.simulation.seed, scenario_id, snr_db)
+        else:
+            seed = self._stable_seed(cfg.simulation.seed, scenario_id, variant_id, snr_db)
+        noise_var = float(10.0 ** (-float(snr_db) / 10.0))
+        noise_var_ls = noise_var
+        max_trials = int(max(cfg.simulation.n_trials_per_snr, cfg.simulation.max_trials_per_snr))
+        target_trials = int(cfg.simulation.n_trials_per_snr)
+        min_errors = int(cfg.simulation.min_block_errors)
+
+        method = str(cfg.channel_estimation.ce_method).upper()
+        true_covariance = tdl_known_delay_covariance(grid, cfg.channel, delays)
+        if method in ("TF_RMMSE_UNKNOWN", "RMMSE_TF_UNKNOWN", "RMMSE_2D_UNKNOWN"):
+            assumed_covariance = tdl_unknown_delay_covariance(grid, cfg.channel)
+        elif method in ("TF_RMMSE_KNOWN", "RMMSE_TF_KNOWN", "RMMSE_2D_KNOWN"):
+            assumed_covariance = true_covariance
+        else:
+            raise ValueError(
+                "Sionna TDL backend requires TF_RMMSE_KNOWN or TF_RMMSE_UNKNOWN channel estimation."
+            )
+        estimator = build_time_frequency_rmmse_filter(
+            grid,
+            assumed_covariance,
+            noise_variance=noise_var_ls,
+            diagonal_loading=float(cfg.channel_estimation.diagonal_loading),
+        )
+        precoder = build_precoder(grid, cfg.resource, cfg.transmission, n_tx=int(cfg.antenna.n_tx))
+        pilot_sc_local = local_indices_for_subcarriers(grid, grid.pilot_subcarrier_indices)
+        data_sc_local = local_indices_for_subcarriers(grid, grid.data_subcarrier_indices)
+
+        tb_errors = 0
+        cb_errors = 0
+        goodput_bits = 0
+        ce_nmse_values: List[float] = []
+        trials = 0
+        while trials < max_trials:
+            trials += 1
+            rng = np.random.default_rng(self._stable_seed(seed, trials))
+            channel_seed = self._stable_seed(seed, trials, "sionna_tdl")
+            channel = generate_sionna_tdl_channel(
+                grid=grid,
+                channel=cfg.channel,
+                n_tx=int(cfg.antenna.n_tx),
+                n_rx=int(cfg.antenna.n_rx),
+                batch_size=1,
+                seed=channel_seed,
+            )
+            true_g = equivalent_channel(channel.H, precoder.C)[0]
+            true_pilot = true_g[:, grid.pilot_symbol_indices, pilot_sc_local]
+            true_data = true_g[:, grid.data_symbol_indices, data_sc_local]
+
+            payload = [
+                rng.integers(0, 2, size=int(k), dtype=np.int8)
+                for k in tb.cb_k_values
+            ]
+            coded_cw = np.concatenate(adapter.encode(payload))
+            symbols = qam_modulate(coded_cw, qm)
+            if len(symbols) != int(grid.n_data_re):
+                raise RuntimeError("QAM symbol count does not match data RE count.")
+
+            ls_obs = construct_ls_observations(true_pilot, noise_var_ls, rng)
+            g_hat_data = estimator.estimate_data(ls_obs)
+            ce_nmse = float(
+                np.sum(np.abs(g_hat_data - true_data) ** 2)
+                / max(float(np.sum(np.abs(true_data) ** 2)), 1e-30)
+            )
+            ce_nmse_values.append(ce_nmse)
+
+            y = self._apply_channel(true_data, symbols, noise_var, rng)
+            z, no_eff = self._equalize_mrc(y, g_hat_data, noise_var)
+            llr_cw = qam_demapper_maxlog(z, no_eff, qm)
+            llrs_by_cb = self._split_llrs(llr_cw, tb.cb_e_values)
+            dec = adapter.decode(llrs_by_cb, payload)
+            if not dec.tb_success:
+                tb_errors += 1
+            cb_errors += sum(1 for ok in dec.cb_success if not ok)
+            goodput_bits += int(dec.goodput_bits)
+
+            if bool(cfg.simulation.save_trial_metrics):
+                self.trial_rows.append({
+                    "scenario_id": scenario_id,
+                    "variant_id": variant_id,
+                    "snr_db": float(snr_db),
+                    "trial": int(trials),
+                    "seed": int(seed),
+                    "channel_seed": int(channel_seed),
+                    "tb_error": int(not dec.tb_success),
+                    "cb_errors": int(sum(1 for ok in dec.cb_success if not ok)),
+                    "ce_nmse_eff": ce_nmse,
+                    "cond_number": float(estimator.condition_number),
+                    "numerical_jitter": float(estimator.numerical_jitter),
+                    "covariance_type": estimator.covariance_type,
+                })
+
+            if trials >= target_trials and (min_errors <= 0 or tb_errors >= min_errors):
+                break
+
+        n_cb_trials = int(trials * len(tb.cb_k_values))
+        row = self._base_metadata(cfg, grid, scenario_id, variant_id, tx_scheme, delays)
+        row.update({
+            "snr_db": float(snr_db),
+            "noise_var": float(noise_var),
+            "noise_var_ls": float(noise_var_ls),
+            "n_trials": int(trials),
+            "tb_errors": int(tb_errors),
+            "cb_errors": int(cb_errors),
+            "bler": float(tb_errors) / float(trials),
+            "cb_bler": float(cb_errors) / float(n_cb_trials),
+            "ce_nmse_eff": self._mean(ce_nmse_values),
+            "ce_nmse_branch": float("nan"),
+            "cond_number": float(estimator.condition_number),
+            "effective_rank": float("nan"),
+            "numerical_jitter": float(estimator.numerical_jitter),
+            "covariance_type": estimator.covariance_type,
+            "true_covariance_type": true_covariance.covariance_type,
+            "tbs_bits": int(tb.tb_size),
+            "coded_bits": int(tb.coded_bits),
+            "n_cbs": int(len(tb.cb_k_values)),
+            "goodput_bits_per_slot": float(goodput_bits) / float(trials),
+            "goodput_se_per_re": float(goodput_bits) / float(max(trials * grid.n_data_re, 1)),
+            "common_random_numbers": bool(getattr(cfg.simulation, "common_random_numbers", True)),
+            "base_seed": int(seed),
+        })
+        return row
+
     @staticmethod
     def _apply_channel(g_by_re: np.ndarray, symbols: np.ndarray, noise_var: float, rng: np.random.Generator) -> np.ndarray:
         g = np.asarray(g_by_re, dtype=np.complex128)
@@ -317,20 +491,29 @@ class CDDLinkLevelOrchestrator:
             "scenario_id": scenario_id,
             "variant_id": variant_id,
             "channel_model": str(cfg.channel.model),
+            "channel_backend": str(getattr(cfg.channel, "backend", "legacy_exponential")),
+            "tdl_profile": str(getattr(cfg.channel, "tdl_profile", "")),
             "delay_spread_ns": float(cfg.channel.delay_spread_ns),
-            "speed_kmh": 0.0,
+            "carrier_frequency_hz": float(getattr(cfg.channel, "carrier_frequency_hz", float("nan"))),
+            "speed_kmh": float(getattr(cfg.channel, "ue_speed_kmh", 0.0)),
+            "speed_mps": float(getattr(cfg.channel, "ue_speed_kmh", 0.0)) / 3.6,
             "n_tx": int(cfg.antenna.n_tx),
             "n_rx": int(cfg.antenna.n_rx),
             "pdsch_rb": int(cfg.resource.n_prbs),
             "pdsch_symbols": int(cfg.resource.pdsch_n_symbols),
             "dmrs_symbols": int(len(cfg.resource.dmrs_symbol_indices)),
+            "dmrs_symbol_indices": ",".join(str(int(x)) for x in cfg.resource.dmrs_symbol_indices),
             "dmrs_spacing_sc": int(cfg.resource.dmrs_spacing_sc),
             "dmrs_overhead": float(grid.dmrs_overhead),
             "n_dmrs_re": int(grid.n_dmrs_re),
+            "ofdm_symbol_duration_s": float(grid.ofdm_symbol_duration_s),
             "data_re": int(grid.n_data_re),
             "tx_scheme": tx_scheme,
             "ce_method": str(cfg.channel_estimation.ce_method),
             "cdd_delay_vector": ",".join(str(int(x)) for x in delays),
+            "cdd_delay_seconds": ",".join(
+                str(float(x) / (float(grid.n_fft) * float(grid.scs_khz) * 1e3)) for x in delays
+            ),
             "prg_size_rb": int(cfg.resource.prg_size_rb),
             "prg_codebook": str(cfg.transmission.prg_codebook),
             "mcs_table": str(cfg.mcs.table),

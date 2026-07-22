@@ -27,13 +27,19 @@ class ResourceConfig:
     dmrs_symbol_indices: List[int] = field(default_factory=lambda: [2, 7])
     dmrs_spacing_sc: int = 6
     dmrs_offset_sc: int = 0
+    cyclic_prefix_length: int = 288
     prg_size_rb: int = 4
 
 
 @dataclass
 class ChannelConfig:
+    backend: str = "legacy_exponential"
     model: str = "tdl"
+    tdl_profile: str = "A"
     delay_spread_ns: float = 30.0
+    carrier_frequency_hz: float = 3.5e9
+    ue_speed_kmh: float = 0.0
+    num_sinusoids: int = 20
     pdp: str = "exponential"
     max_delay_factor: float = 8.0
     normalize: bool = True
@@ -78,11 +84,13 @@ class MCSConfig:
 @dataclass
 class SimulationConfig:
     snr_range_db: List[float] = field(default_factory=lambda: [-4, 12, 2])
+    snr_points_db: List[float] = field(default_factory=list)
     n_trials_per_snr: int = 20
     min_block_errors: int = 0
     max_trials_per_snr: int = 200
     seed: int = 42
     output_dir: str = "outputs"
+    run_id: Optional[str] = None
     bler_target: float = 0.10
     save_trial_metrics: bool = False
     common_random_numbers: bool = True
@@ -161,8 +169,8 @@ def _construct_dataclass(cls, data: Dict[str, Any]):
 
 
 def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
-    if int(config.antenna.n_tx) not in (1, 2, 4):
-        raise ValueError(f"antenna.n_tx must be 1, 2, or 4. config={source_path}")
+    if int(config.antenna.n_tx) not in (1, 2, 4, 8):
+        raise ValueError(f"antenna.n_tx must be 1, 2, 4, or 8. config={source_path}")
     if int(config.antenna.n_rx) <= 0:
         raise ValueError(f"antenna.n_rx must be positive. config={source_path}")
     if int(config.resource.n_prbs) <= 0:
@@ -173,6 +181,23 @@ def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
         raise ValueError(f"resource.dmrs_symbol_indices must not be empty. config={source_path}")
     if int(config.resource.n_fft) <= int(config.resource.n_prbs) * 12:
         raise ValueError(f"resource.n_fft must exceed active subcarriers. config={source_path}")
+    if int(config.resource.cyclic_prefix_length) < 0:
+        raise ValueError(f"resource.cyclic_prefix_length must be non-negative. config={source_path}")
+    if any(int(s) < 0 or int(s) >= int(config.resource.pdsch_n_symbols)
+           for s in config.resource.dmrs_symbol_indices):
+        raise ValueError(f"resource.dmrs_symbol_indices are outside the PDSCH grid. config={source_path}")
+    if str(config.channel.backend).lower() not in ("legacy_exponential", "sionna_tdl"):
+        raise ValueError(f"channel.backend must be legacy_exponential or sionna_tdl. config={source_path}")
+    if str(config.channel.tdl_profile).upper() not in ("A", "B", "C", "D", "E", "A30", "B100", "C300"):
+        raise ValueError(f"channel.tdl_profile is invalid. config={source_path}")
+    if float(config.channel.delay_spread_ns) <= 0:
+        raise ValueError(f"channel.delay_spread_ns must be positive. config={source_path}")
+    if float(config.channel.carrier_frequency_hz) <= 0:
+        raise ValueError(f"channel.carrier_frequency_hz must be positive. config={source_path}")
+    if float(config.channel.ue_speed_kmh) not in (0.0, 3.0, 60.0):
+        raise ValueError(f"channel.ue_speed_kmh must be 0, 3, or 60. config={source_path}")
+    if int(config.channel.num_sinusoids) <= 0:
+        raise ValueError(f"channel.num_sinusoids must be positive. config={source_path}")
     if int(config.simulation.n_trials_per_snr) <= 0:
         raise ValueError(f"simulation.n_trials_per_snr must be positive. config={source_path}")
     if len(config.simulation.snr_range_db) != 3:

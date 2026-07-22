@@ -3,11 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List
 import math
+import os
+import tempfile
 
 
 def _import_pyplot():
-    import os
-    os.environ.setdefault("MPLCONFIGDIR", "/private/tmp/cdd_lls_matplotlib")
+    os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "cdd_lls_matplotlib"))
     os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
     import matplotlib
     matplotlib.use("Agg")

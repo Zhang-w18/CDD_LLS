@@ -1,0 +1,52 @@
+antenna:
+  n_tx: 8
+  n_rx: 1
+
+resource:
+  carrier_bandwidth_mhz: 100.0
+  scs_khz: 30
+  n_fft: 4096
+  n_prbs: 8
+  pdsch_n_symbols: 10
+  dmrs_symbol_indices: [2, 7]
+  dmrs_spacing_sc: 24
+  dmrs_offset_sc: 0
+  cyclic_prefix_length: 288
+
+channel:
+  backend: sionna_tdl
+  model: 3gpp_tr38901_tdl
+  tdl_profile: A
+  delay_spread_ns: 5
+  carrier_frequency_hz: 3.5e9
+  ue_speed_kmh: 0
+  num_sinusoids: 20
+
+transmission:
+  tx_scheme: CDD
+  cdd_delay_vector: [0, 9, 18, 27, 36, 45, 54, 63]
+
+channel_estimation:
+  ce_method: TF_RMMSE_KNOWN
+  diagonal_loading: 1.0e-10
+
+mcs:
+  table: nr_256qam
+  index: 8
+
+receiver:
+  max_ldpc_iterations: 2
+  llr_clip: 50.0
+
+simulation:
+  snr_range_db: [14.0, 14.0, 1.0]
+  n_trials_per_snr: 1
+  min_block_errors: 0
+  max_trials_per_snr: 1
+  seed: 20260722
+  output_dir: outputs/experiment025_sionna_tdl_rmmse/20260722_main/smoke
+  common_random_numbers: true
+  save_trial_metrics: true
+
+plots:
+  enabled: false

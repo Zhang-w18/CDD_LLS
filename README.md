@@ -1,81 +1,18 @@
-# CDD LLS Simulation Platform
+# CDD LLS 仿真项目
 
-这是基于 Sionna LDPC 的 QC 显式 CDD 链路级仿真平台第一版。平台复用 `lls_platform_slm` 的工程风格：YAML 配置驱动、`run.py` 统一入口、CSV/JSON/PNG 输出。
+本项目研究频域相位预编码矩阵 `V`、CDD、DMRS 和信道估计对链路级 BLER 的联合影响。
 
-## 研究工作流
+任何 Agent 先读 `AGENTS.md`。制定实验计划时，再按顺序读 `GOALS.md`、`DESIGN.md`、`KNOWLEDGE.md` 和最新 `research/result-NNN-text.md`。
 
-本项目采用迭代式研究工作流，详见 `CLAUDE.md`。核心文档：
+当前最新完成实验是 `024`。result-024 已确认 Sidon delay 集在限定的 48 PRB 平坦信道、V-aware matched LMMSE 条件下优于等差 QC CDD；下一阶段验证物理 PDP、失配、定时误差和带宽变化。
 
-- [`GOALS.md`](GOALS.md)：研究目标与当前阶段验收标准。
-- [`KNOWLEDGE.md`](KNOWLEDGE.md)：已沉淀结论、开放问题（唯一记忆体，持续更新）。
-- `research/plan-NNN.md` / `research/result-NNN.md`：每轮自包含仿真计划与结构化结果摘要，最新编号从 022 开始。
-- `docs/archive/`：历史长文档（QC 复现计划书、V 矩阵理论、实验 1-21 完整记录、英文综合报告），仅按需查阅，日常迭代不重读。
+## 代码入口
 
-## 环境
-
-优先复用本机已有 Sionna 环境：
-
-```bash
-/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python run.py --config configs/smoke.yaml
+```powershell
+python run.py --config configs/smoke.yaml
+python -m unittest discover -s tests
 ```
 
-该环境已验证包含：
+专题实验入口位于 `tools/`，命令以对应 plan 为准。
 
-- TensorFlow 2.19.1
-- Sionna 1.2.0
-- NumPy / PyYAML / Matplotlib
-
-## 快速运行
-
-最小闭环 smoke：
-
-```bash
-/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python run.py --config configs/smoke.yaml
-```
-
-覆盖 PRG、ideal CSI、RMMSE、pairwise reconstruction、basis reconstruction 的小测试：
-
-```bash
-/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python run.py --config configs/smoke_variants.yaml
-```
-
-QC 静态 TDL 趋势复现配置：
-
-```bash
-/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python run.py --config configs/config_qc_static_tdl.yaml
-```
-
-RMMSE vs reconstruction 对比配置：
-
-```bash
-/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python run.py --config configs/config_recon_vs_rmmse.yaml
-```
-
-## 输出
-
-每次运行会生成一个时间戳目录，例如：
-
-```text
-outputs/smoke/sim_YYYYMMDD_HHMMSS/
-```
-
-主要文件：
-
-- `resolved_config.yaml`：本次运行展开后的完整配置。
-- `summary.csv` / `summary.json`：每个 scenario/variant/SNR 的 BLER、NMSE、goodput 和配置元数据。
-- `summary_10pct_bler_snr.csv`：按目标 BLER 插值得到的 SNR 和相对 PRG baseline 增益。
-- `trial_metrics.csv`：仅当 `simulation.save_trial_metrics: true` 时输出逐 trial 记录。
-- `bler_curves.png`：BLER vs SNR 曲线。
-- `ce_nmse_curves.png`：等效信道 NMSE vs SNR 曲线。
-
-## 测试
-
-不依赖 pytest，直接用标准库 unittest：
-
-```bash
-/Users/zhangwei/Downloads/lls_platform_sc_mimo/.venv-sionna1/bin/python -m unittest discover -s tests
-```
-
-## 当前范围
-
-第一版实现 static TDL、单层 PDSCH、2Tx/4Tx 到 4Rx、CDD/PRG/NO_CDD、IDEAL/LS/RMMSE/reconstruction 信道估计，以及 Sionna LDPC bit-level BLER。UE mobility、CDL、宽带 massive-MIMO 预编码暂未纳入第一版闭环。
+目录：`cdd_lls/` 为仿真库，`configs/` 为配置，`tools/` 为专题入口，`tests/` 为测试，`research/` 为研究记录，`docs/` 为文档和引用图，`outputs/` 为可再生输出。

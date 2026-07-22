@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import os
+from pathlib import Path
+import tempfile
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
-os.environ.setdefault("MPLCONFIGDIR", "/private/tmp/cdd_lls_matplotlib")
+os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "cdd_lls_matplotlib"))
 os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
 
 from cdd_lls.core.config import load_config

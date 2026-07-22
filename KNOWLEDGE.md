@@ -1,91 +1,100 @@
-# KNOWLEDGE —— 智能体记忆体（导航式）
+# KNOWLEDGE：Agent 精简知识
 
-> **用法**：本文件是给分析 agent 每轮读的精简记忆。按下面「目录」定位需要的小节即可，不必逐字通读。
-> 每条结论只写「一句话主张 + 一句话原因 + 指针」。需要**数字证据/图表**看给人的详尽文档 `docs/FINDINGS.md`（不必每轮读）；需要**原始推导**看 `docs/archive/`。
-> `[E##]` 是历史实验编号，仅供在 FINDINGS/archive 中检索定位，本文件不展开。
+## 1. 使用方法
 
-## 当前状态（一句话）
+本文件记录实验或明确推导支持的结论、已排除方向、开放问题和证据路径。制定 plan 时同时读取 `GOALS.md`、`DESIGN.md` 和最新无图版 result。历史推导按需读取 `docs/design/DESIGN_ANNOTATED.md` 或 `docs/archive/`。
 
-CDD（含大 delay 变体）在当前 8Tx/1Rx + 稀疏 comb DMRS 体制下是 estimated-CSI BLER 的实践最优；分段线性相位 N-series 只在矩阵层面和 ideal-CSI 层面赢，一进真实稀疏导频估计就倒扣。plan-022 正在验证「导频感知联合目标」能否翻盘。
+## 2. 当前状态
 
-## 目录
+在 48 PRB、8 Tx / 1 Rx、平坦分支信道、DMRS comb 24、V-aware matched LMMSE 条件下，Sidon delay 集 `[0,1,3,7,12,20,30,65]` 相对等差 QC CDD 的 10% BLER 改善 0.33 dB，1% 改善 0.85 dB，两个保守 95% 区间均不跨 0。下一阶段验证 5–100 ns PDP、失配、定时误差和带宽变化。
 
-- **A. 平台与算法命名** — 跑什么、算法怎么叫（改动实现前先看）
-- **B. 已确立结论** — B1~B8，每条一句话主张
-- **C. 已排除的死路** — 不要重复尝试的方向
-- **D. 当前开放问题** — plan-022 及之后要回答的
-- **E. 历史文档索引** — 需要溯源时才打开
+## 3. 平台与命名
 
----
+- `run.py` 是通用入口；YAML 在 `configs/`；专题入口在 `tools/`；产物在 `outputs/`。
+- 已实现 static TDL、单层 PDSCH、2/4/8 Tx、1/4 Rx、CDD/PRG/一般 `\mathbf V`、IDEAL/RMMSE/reconstruction 类估计和 bit-level BLER。
+- Algorithm 1：直接等效信道 RMMSE。
+- Algorithm 2B：多导频 delay-domain basis LMMSE。
+- Algorithm 2C：local-window deterministic。
+- Algorithm 3：non-CDD per-port DMRS。
+- 符号以 `DESIGN.md` 为准。
 
-## A. 平台与算法命名
+## 4. 已确立结论
 
-- **平台**：Sionna LDPC + 自研 link-level 链路，YAML 配置驱动，`run.py` 入口，输出到 `outputs/<name>/sim_*/`。
-- **已实现**：static TDL、单层 PDSCH、2/4/8 Tx → 1/4 Rx、CDD/PRG/一般 `V` 预编码、IDEAL / RMMSE(4RB & wideband) / reconstruction 系列 CE、Sionna LDPC bit-level BLER。
-- **未实现（暂不在范围）**：UE 移动性、Doppler、time-varying TDL、宽带 massive-MIMO 预编码降维。
-- **算法统一命名**（后续一律沿用）：
-  - **Algorithm 1** — Direct equivalent-channel RMMSE。CDD 用 shifted-PDP Toeplitz 协方差；一般 `V` 用完整非平稳协方差 `R_g = R_phy ⊙ (CC^H)`。
-  - **Algorithm 2B** — multi-pilot delay-domain basis LMMSE：先估底层物理分支信道，再重构等效信道。
-  - **Algorithm 2C** — local-window deterministic：在相干带宽窗口内把底层信道当常数。
-  - **Algorithm 3** — non-CDD per-port DMRS：导频不加 CDD，正交估各端口物理信道，再用已知 delay 合成等效信道。
+### K1. Algorithm 1 是共享同一组合导频观测时的主要基线
 
----
+Algorithm 2B/2C 没有增加独立观测，在统一网格上没有稳定增益。证据：`docs/FINDINGS.md` B1–B2。
 
-## B. 已确立结论
+### K2. Algorithm 2B/2C 的限制是观测秩和条件数
 
-> 每条：主张 → 原因 → 证据指针。数字与图在 `docs/FINDINGS.md` 同名小节。
+已测重构矩阵条件数约 `10^{12}`–`10^{13}`，未知量零空间比例可超过 70%。缩短 delay support、增大 diagonal loading 和 pairwise 解耦均未解决。证据：`docs/FINDINGS.md` B2。
 
-### B1. Algorithm 1 是最强通用 baseline
-只要所有估计器共享同一组 CDD-combined DMRS 观测，matched direct RMMSE 就最强。它直接估计检测器需要的等效信道、用上了已知 CDD 统计、不做多余的分支分离。证据：FINDINGS §B1。
+### K3. Algorithm 3 的增益来自参考信号改变
 
-### B2. Algorithm 2B/2C 在统一网格上没有稳健增益
-最佳观测增益仅 +0.014 dB，处于有限 trial 噪声内。根因是**观测受限**：从单层 CDD-combined 导频反推多个物理分支 tap，敏感矩阵 `Phi` 条件数 1e12~1e13、nullity 可达未知量 70%+，重构不增加独立观测。证据：FINDINGS §B2。
+代价是额外 DMRS 开销或更低每端口导频密度，比较必须核算开销。证据：`docs/FINDINGS.md` B3。
 
-### B3. Algorithm 3 在「稀疏导频 + 大 CDD delay」能拿大增益
-最大 +18.237 dB（delay=512 samples、DMRS spacing=24 时 15 个组合全正）。原因是它**改了参考信号设计本身**（正交估各端口），不是换估计器。代价：额外 DMRS 开销 / 降每端口密度，比较必须核算开销公平性。证据：FINDINGS §B3。
+### K4. 矩阵指标和 ideal-CSI 不能替代 estimated-CSI
 
-### B4. N-series 分段线性相位在矩阵层面确实改善 Pareto 前沿
-相位连续的局部 slope 切换（尤其带符号非均匀字母表 + 拉丁方布局）在分集/相干带宽平面上优于常规 CDD；ideal-CSI BLER 也观测到增益（48PRB 下 10%/1% 增益达 +0.36~+1.55 dB）。证据：FINDINGS §B4。
+N-series 在矩阵与 ideal-CSI 上可优于 CDD，但 result-021 的 12/12 个 estimated-CSI NMSE 点全部劣化，最大倒扣 8.04 dB。候选必须经过实际 DMRS 下的 NMSE 和编码 BLER。证据：`research/result-021.md`。
 
-### B5.【核心痛点】ideal-CSI 分集增益换不到 estimated-CSI BLER 增益
-稀疏 DMRS + Algorithm 1 下，N-series 的 matched RMMSE NMSE 在 20dB 处倒扣 1.81~3.26 dB（常规候选），24PRB N8 倒扣 8.04 dB 并出现 ~11-15% BLER floor。原因：N-series 制造的**非平稳等效协方差**在稀疏导频下比 CDD 的平稳 shifted-PDP 更难插值。**这就是"结果不符合预期"的确切位置——是折中的真实体现,不是 bug。** 证据：FINDINGS §B5。
+### K5. 大 CDD delay 的性能不是单调函数
 
-### B6. 矩阵指标只能筛选,不能当最终目标
-`log det(V^H V)`、`B_0.5`（相干带宽）都无法决定完整非平稳协方差在稀疏导频下的可估计性,也决定不了编码 BLER。任何候选 `V` 必须过两关：matched full-cov RMMSE NMSE + estimated-CSI 编码 BLER。证据：FINDINGS §B6。
+性能由全带正交、导频折叠位置、物理 PDP 和接收机共同决定。证据：`docs/FINDINGS.md` B7、`research/result-023.md`。
 
-### B7. CDD delay 增大对 BLER 非单调
-等效信道相干带宽随 delay 增大而压缩,是否更优取决于与 DMRS spacing 的交互,存在非平凡最优点。不要假设"delay 越大越好"。证据：FINDINGS §B7。
+### K6. 当前完全透明分段方向未达到验收标准
 
-### B8. 接收机 LLR 未注入 CE 误差自噪声（潜在修正点）
-当前解调 LLR 的噪声方差没有加入信道估计误差项。这可能是大 NMSE 候选（如 24PRB N8）出现 BLER floor 而非平滑退化的部分原因。尚未验证,列为候选修正。证据：FINDINGS §B8。
+result-023 中 48 PRB 和 24 PRB 共 232 个 CC/CN 挑战者均未达到透明 CDD/PRG 基线支配门槛。证据：`research/result-023.md`。
 
----
+### K7. 分段边界信息不是 B3/B4 的通用修正
 
-## C. 已排除的死路（不要重复尝试）
+result-024 E1：48 PRB B3 改善 6/16、B4 改善 0/100；24 PRB B3 改善 7/16、B4 改善 0/100。48 PRB 无通过点，24 PRB 只有 `B3_cc_nseg8_T6_seq` 半透明诊断点通过。证据：`research/result-024-text.md`。
 
-1. **单纯调参救 Algorithm 2B/2C 的数值病态** —— 已验证无效的有：缩短 delay support（90/95/99% 能量）、加大 diagonal loading（1e-6~1e-2）、pairwise 解耦（条件数同样爆炸）。除非**改变导频观测方式本身**（如走 Algorithm 3 思路），否则别再动这些旋钮。见 B2。
-2. **用矩阵指标本身作为 `V` 设计的最终验收** —— 必须过 RMMSE NMSE + BLER 关。见 B5、B6。
-3. **假设"CDD delay 越大分集越好"** —— 必须结合 DMRS spacing 联合看。见 B7。
+### K8. 栅格等差 CDD 在平坦模型下同轨道等价
 
----
+等差步长 2、4、9 相对步长 1 的 10%/1% outage 差在 0.0001 dB 内。证据：`research/result-023.md` H3。
 
-## D. 当前开放问题
+### K9. Sidon delay 集改善平坦模型 outage
 
-- **[plan-022 主问题]** 联合目标 `J(V) = J_div(V) - mu * L_CE(V; 实际DMRS pattern)` 能否筛出「保留 ideal-CSI 分集增益、且 estimated-CSI BLER 不劣于 CDD」的候选？验收标准见 `research/plan-022.md` §7 与 `GOALS.md`。
-- **[plan-023 主问题，Track B 先导]** 在固定 4RB 滑窗透明接收机下，「局部聚簇 + 全局轮转」（相位连续 cycling / 封顶 N-series）能否在（闭式失配 NMSE，MC outage）平面严格支配透明 CDD 与 PRG cycling（DESIGN §7 P5，Track B 存亡判定）？附带检验 P4（宽带窗塌缩）、P6/P7（等差同轨道 / Sidon 尾部）。纯数值扫描、与 plan-022 并行，见 `research/plan-023.md`。**待研究者确认参考接收机规格与"接近 QC"阈值后再交实现 agent。**
-- **[失败分支]** 若联合目标筛完仍全劣于 CDD → 转向"联合优化 DMRS pattern 本身"（而非只调 `V`），或转 Algorithm 3 类"改参考信号"方向（见 B3）。
-- **[候选修正,不阻塞]** 接收机 LLR 是否应加 CE-error-aware 噪声项?会不会改变 N8 的 BLER floor 结论?见 B8,暂未排期。
+`[0,1,3,7,12,20,30,65]` 相对等差 CDD 的 10%/1% outage 改善为 0.210/0.368 dB。该集合 36 个无序整数成对和均不同。证据：`research/result-023.md`、`research/result-024.md`。
 
----
+### K10. Sidon 改善传递到 V-aware estimated-CSI BLER
 
-## E. 历史文档索引（按需溯源,默认不读）
+| 目标 | QC SNR | Sidon SNR | 改善 | 保守 95% 区间 |
+|---|---:|---:|---:|---:|
+| 10% BLER | 14.65 dB | 14.32 dB | 0.33 dB | [0.20, 0.45] dB |
+| 1% BLER | 17.23 dB | 16.38 dB | 0.85 dB | [0.63, 1.07] dB |
 
-| 想找什么 | 去哪 |
-|---|---|
-| **顶层理论框架 / `V` 设计空间 / 度量指标 / 两条赛道**（做战略规划时对照） | **`DESIGN.md`**（v2,顶层,非归档） |
-| v1 旧设计文档（Gram/平滑性旧框架,已被 v2 取代;候选结构原始细节仍在此） | `docs/archive/DESIGN_v1.md` |
-| 结论 B1~B8 的数字证据 + 图表（给人看的详尽版） | `docs/FINDINGS.md` |
-| QC 系统模型、Algorithm 1/2B/2C/3 完整数学推导 | `docs/archive/QC_explicit_CDD_link_level_simulation_plan.md` |
-| 实验 1–19 完整过程记录（含病态诊断细节） | `docs/archive/experiment_record_20260608.md` |
-| N-series 矩阵构造、Pareto 扫描细节 | `docs/archive/v_design_piecewise_tradeoff_experiment.md` |
-| 结论 B1~B8 的英文综合出处 | `docs/archive/cdd_nontransparent_channel_estimation_and_frequency_domain_precoder_report.md` |
+1% 区间使用 3000 trials/点。证据：`research/result-024-text.md`。
+
+### K11. result-024 的改善不是 CE NMSE 差导致
+
+全部加密点中 `NMSE_{\rm Sidon}-NMSE_{\rm QC}` 最大绝对值 0.060 dB，且正负均有。高阶频域相关结构与有限码长译码是待验证解释。
+
+### K12. Sidon 结论只在限定条件内成立
+
+已验证：48 PRB、8 Tx / 1 Rx、单层、DMRS comb 24、平坦独立分支信道、V-aware matched LMMSE。未验证：5–100 ns PDP、定时误差、协方差失配、24/36 PRB 和移动性。
+
+### K13. LLR 尚未显式加入信道估计误差项
+
+当前 LLR 噪声方差没有加入 CE-error-aware 项。该问题尚未验证，不构成推翻 result-024 成对比较的证据。证据：`docs/FINDINGS.md` B8。
+
+## 5. 已排除或暂停方向
+
+1. 不再单独调整 delay support、diagonal loading 或 pairwise 解耦优化 Algorithm 2B/2C，除非改变导频观测。
+2. 不使用矩阵代理量作为最终验收。
+3. 不把等差 CDD 大 delay 步长本身解释为平坦模型分集增益。
+4. 不继续把完全透明 CC/CN 家族作为当前主要方向。
+5. 不把单个半透明通过点表述为完全透明方案成功。
+6. 完成 Sidon 稳健性检查前，不启动新候选大规模搜索。
+
+## 6. 当前开放问题
+
+1. 5–100 ns PDP 下的导频矩阵条件、matched NMSE 和 BLER；
+2. PDP 或协方差失配；
+3. 定时误差；
+4. 24 / 36 / 48 PRB 一致性；
+5. 深尾优势大于 outage 预测的原因；
+6. CE-error-aware LLR 的影响。
+
+## 7. 证据索引
+
+`GOALS.md`、`DESIGN.md`、`docs/design/DESIGN_ANNOTATED.md`、`research/result-021.md`、`research/result-023.md`、`research/result-024.md`、`research/result-024-text.md`。
