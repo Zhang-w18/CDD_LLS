@@ -11,6 +11,7 @@ from typing import Dict, List, Sequence
 
 import numpy as np
 from scipy.optimize import minimize
+from scipy.stats import binomtest
 
 
 IDS = ("QC", "Sidon")
@@ -126,6 +127,52 @@ def ce_fairness(rows: Sequence[Dict[str, str]]) -> Dict[str, object]:
     }
 
 
+def paired_error_analysis(directories: Sequence[Path]) -> Dict[str, object]:
+    rows = []
+    for directory in directories:
+        path = directory / "paired_error_counts.csv"
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            rows.extend(csv.DictReader(handle))
+
+    by_snr = []
+    total_qc_only = 0
+    total_sidon_only = 0
+    for row in sorted(rows, key=lambda item: float(item["snr_db"])):
+        qc_only = int(row["qc_only_error"])
+        sidon_only = int(row["sidon_only_error"])
+        discordant = qc_only + sidon_only
+        p_value = float(
+            binomtest(min(qc_only, sidon_only), discordant, p=0.5).pvalue
+        ) if discordant else 1.0
+        by_snr.append({
+            "snr_db": float(row["snr_db"]),
+            "qc_only_error": qc_only,
+            "sidon_only_error": sidon_only,
+            "discordant_pairs": discordant,
+            "mcnemar_exact_two_sided_p": p_value,
+        })
+        total_qc_only += qc_only
+        total_sidon_only += sidon_only
+
+    total_discordant = total_qc_only + total_sidon_only
+    total_p_value = float(
+        binomtest(
+            min(total_qc_only, total_sidon_only), total_discordant, p=0.5
+        ).pvalue
+    ) if total_discordant else 1.0
+    return {
+        "aggregate_qc_only_error": total_qc_only,
+        "aggregate_sidon_only_error": total_sidon_only,
+        "aggregate_discordant_pairs": total_discordant,
+        "aggregate_mcnemar_exact_two_sided_p": total_p_value,
+        "aggregation_note": (
+            "The aggregate test pools different SNR points and is supporting evidence; "
+            "target-SNR fits remain the primary comparison."
+        ),
+        "by_snr": by_snr,
+    }
+
+
 def plot(refine10, refine1, summary, path: Path) -> None:
     import matplotlib
     matplotlib.use("Agg")
@@ -192,6 +239,7 @@ def main() -> None:
             "bler1": target_summary(refine1, "bler1", 0.01),
         },
         "ce_fairness": ce_fairness([*refine10, *refine1]),
+        "paired_error_analysis": paired_error_analysis([args.refine10, args.refine1]),
         "prescan": {
             "snrs_db": sorted({float(row["snr_db"]) for row in prescan}),
             "trials_per_point": sorted({int(row["trials"]) for row in prescan}),

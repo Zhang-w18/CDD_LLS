@@ -24,15 +24,17 @@
 
 因此，“存在一般 `\mathbf V` 在同 DMRS 开销下优于等差 CDD”的假设已在上述限定条件内成立。该结论不能直接推广到频率选择性 TDL、定时误差、协方差失配、其他带宽或移动信道。
 
+result-025 的 delay-matched `/576` 补做只把底层平坦分支信道替换为 Sionna TDL-A 5 ns，并保持双方使用各自真实复合协方差的 matched LMMSE。该条件下 Sidon 相对 QC 的 10% BLER 改善为 0.156 dB，保守 95% 区间 [0.045, 0.266] dB；1% 改善点估计为 0.090 dB，保守 95% 区间 [-0.210, 0.391] dB。10% 小幅优势得到确认，1% 排序不能确定。TDL 加权后二阶相关代理变为 QC 略低，Sidon 四阶代理仍明显较低；Sidon 的 data-RE CE NMSE 较 QC 差 0.754–1.271 dB。该结果只适用于 TDL-A 5 ns、零速度、当前 DMRS/MCS 和 known-delay matched 接收机。
+
 ## 4. 当前阶段目标
 
-验证 Sidon 优势的稳健性，并确定适用范围：
+在 result-025 已确认的基础上，寻找物理展宽信道下更有潜力的结构化 CDD 时延设计，并继续确定原 Sidon 优势的适用范围：
 
-1. 在 5–100 ns 物理 PDP 下检查导频可辨识性、条件数和闭式 NMSE；
-2. 对通过低成本检查的条件运行 estimated-CSI BLER；
-3. 检查协方差失配和定时误差；
-4. 检查 24 / 36 / 48 PRB；
-5. 汇总保持优势、持平和反向的条件。
+1. 在完整物理协方差已知时联合设计 CDD residue/lift，并检查分集代理、matched CE 和 outage 的 Pareto 前沿；
+2. 在发射端只知道有效时延支撑时，探索厚 Sidon 的可行条件和潜力区域；
+3. 在近似平坦 TDL 与 LoS TDL 条件下复核原 Sidon 的 estimated-CSI BLER；
+4. 后续检查协方差失配、定时误差和 24 / 36 / 48 PRB 一致性；
+5. 汇总保持优势、持平和反向的物理条件。
 
 新 plan 的阈值、PDP 集合、trial 数和停止条件必须在实施前与研究者确认。
 
@@ -59,8 +61,8 @@
 - UE 移动性、Doppler、time-varying TDL；
 - massive-MIMO 预编码降维后再叠加 CDD；
 - 标准化、信令开销和硬件实现评估；
-- 新候选大规模搜索。
+- 与 CDD residue/lift 无关的一般高维 `\mathbf V` 大规模搜索。
 
 ## 7. 最新证据
 
-`research/plan-024.md`、`research/result-024.md`、`research/result-024-text.md`、`outputs/experiment024_segment_sidon_qc/20260716_main/`。
+`research/plan-025.md`、`research/result-025.md`、`research/result-025-text.md`、`outputs/experiment025_sionna_tdl_rmmse/20260723_delay_matched/`。

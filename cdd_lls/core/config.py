@@ -48,8 +48,8 @@ class ChannelConfig:
 @dataclass
 class TransmissionConfig:
     tx_scheme: str = "CDD"
-    cdd_delay_vector: Optional[List[int]] = field(default_factory=lambda: [0, 8])
-    cdd_base_delay: int = 8
+    cdd_delay_vector: Optional[List[float]] = field(default_factory=lambda: [0, 8])
+    cdd_base_delay: float = 8
     prg_codebook: str = "qpsk_dft"
     prg_cycling_order: Optional[List[int]] = None
 

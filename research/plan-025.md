@@ -16,6 +16,8 @@
 
 本轮包含 plan-024 条件向近似平坦 TDL 的迁移验证，但不预设必须复现原来的 0.33/0.85 dB 数值。3/60 km/h 下的正式移动 TDL BLER 扫描另行讨论。
 
+> 2026-07-23 修订说明：第二部分第 5 节已改写为“保持 plan-024 物理 CDD 时延与链路定义、仅替换底层信道生成器”的补做实验草案。该补做尚未执行，须经研究者审核确认后才能修改代码或启动仿真。2026-07-22 已完成的 `/4096` 整数采样延迟结果保留为首次执行记录，不作为单独归因于 TDL-A 的证据。
+
 ## 一、代码修改计划
 
 ### 1. 建立本地运行环境
@@ -245,44 +247,184 @@ CDD:      全零、QC、Sidon
 
 旧路径允许通过兼容层继续使用原来的一维静态信道和 DMRS 平均语义，但不能影响新路径。软件回归失败时先修复兼容性，不开始新的 TDL 对比。
 
-### 5. 用近似平坦 Sionna TDL 重新运行 plan-024 对比
+### 5. 补做：保持 plan-024 物理 CDD 时延，仅用 Sionna TDL-A 替换底层信道
 
-这里的“复现 plan-024”是复现其比较问题和仿真条件，不是复现旧平坦信道代码或要求逐比特一致。
+#### 5.1 研究问题、假设和变量隔离
 
-使用重构后的统一信道和估计链路，配置：
+研究问题：在保持 plan-024 E2 的 QC/Sidon 预编码矩阵、物理 CDD 时延、资源分配、DMRS、功率与噪声定义、编码调制、接收机知识和统计方法不变时，仅把底层平坦分支信道替换为 Sionna 1.0.2 的 3GPP TR 38.901 TDL-A、5 ns、零速度信道，Sidon 相对 QC 的 estimated-CSI BLER 优势是否保持？
+
+可证伪假设：
+
+- `H1`：Sidon 的 10% BLER 目标 SNR 相对 QC 改善不低于 0.15 dB，且保守 95% 区间不支持反向排序；
+- `H2`：样本充分时，Sidon 的 1% BLER 目标 SNR 不高于 QC；若目标附近任一候选累计错误块少于 30，只报告先导结果；
+- `H3`：补做实验使用的 QC/Sidon 频域预编码矩阵与 plan-024 对应矩阵逐元素一致，最大绝对误差不超过 `1e-12`。若 `H3` 不通过，不得启动正式 BLER 扫描。
+
+本补做只允许一个主动变化：底层分支信道从 plan-024 的频率平坦 `h_n~CN(0,1)` 改为 Sionna TDL-A 5 ns 频率响应 `H_{s,k,n}`。matched 接收机的真实频率协方差必须随物理信道改为 TDL-A 与 CDD 的复合协方差，这是保持“双方均为 known-delay matched/oracle 接收机”的必要变化，不作为第二个独立实验变量。不得同时改变 CDD 相位斜率、归一化、导频处理、数据映射、LLR 噪声定义或 MCS。
+
+#### 5.2 物理时延与相位矩阵的精确定义
+
+固定有效子载波数 `K=576`、FFT 长度 `N_FFT=4096`、子载波间隔 `Delta_f=30 kHz`。plan-024 的 DFT 栅格索引 `j_n` 必须先换算成物理时延和允许为非整数的 FFT 采样延迟：
+
+$$
+\tau_n=\frac{j_n}{K\Delta f},
+\qquad
+d_n=\tau_n N_{FFT}\Delta f
+=j_n\frac{N_{FFT}}{K}
+=j_n\frac{64}{9}.
+$$
+
+频域预编码必须以有效带宽第一个子载波为相位参考，使用 plan-024 的局部有效子载波索引 `m=0,...,575`：
+
+$$
+V_{m,n}=\exp(-j2\pi m\Delta f\tau_n)
+=\exp\left(-j\frac{2\pi m j_n}{K}\right).
+$$
+
+不得把原始 `j_n` 直接代入 `/4096` 公式。若底层接口使用中心化子载波索引，必须补偿每端口的常相位，使最终 `V` 与上述局部索引公式逐元素一致；不能只依赖“统计分布等价”。本补做保留 plan-024 的未归一化矩阵 `|V_{m,n}|=1`，不使用 `1/sqrt(8)` 归一化。
+
+
+| 候选 | DFT 栅格索引 `j_n` | FFT 采样延迟 `d_n=j_n*64/9`，samples | 物理时延 `tau_n=j_n/(576*30 kHz)`，ns |
+|---|---|---|---|
+| QC | `[0,9,18,27,36,45,54,63]` | `[0,64,128,192,256,320,384,448]` | `[0,520.833333,1041.666667,1562.5,2083.333333,2604.166667,3125,3645.833333]` |
+| Sidon | `[0,1,3,7,12,20,30,65]` | `[0,7.111111,21.333333,49.777778,85.333333,142.222222,213.333333,462.222222]` | `[0,57.870370,173.611111,405.092593,694.444444,1157.407407,1736.111111,3761.574074]` |
+
+
+
+输出必须同时保存 `j_n`、`d_n`、`tau_n_s`、相位参考、`K`、`N_FFT` 和 `Delta_f`，不得只保存名为 `delay` 的无单位数组。
+
+#### 5.3 完整仿真条件
+
+| 类别 | 参数 | 取值 | 与 plan-024 的关系 |
+|---|---|---|---|
+| 信道 | 生成器 | Sionna 1.0.2 `TDL` + `GenerateOFDMChannel` | 唯一主动变化 |
+| 信道 | profile / RMS delay spread | TDL-A / 5 ns | 新物理信道条件 |
+| 信道 | UE 速度 / 载频 | 0 km/h / 3.5 GHz | 零多普勒；载频仅为 Sionna 必需配置 |
+| 信道 | realization 归一化 | 不做 per-realization normalization | 保留 TDL 自然功率波动 |
+| 天线 | 发射 / 接收 / 层数 | 8 / 1 / 1 | 相同 |
+| 资源 | SCS / FFT / CP | 30 kHz / 4096 / 288 samples | 相同 SCS 和 FFT；CP 供 Sionna OFDM 使用 |
+| 资源 | 分配 | 48 PRB，576 active SC，中心连续映射 | 相同 |
+| 资源 | PDSCH symbols | 10 | 相同 |
+| DMRS | symbols / comb / offset | `[2,7]` / 24 / 0 | 相同 |
+| DMRS | pilot RE / data RE | 48 / 5712 | 必须与 plan-024 坐标逐项相同 |
+| 候选 | QC / Sidon | 第 5.2 节两组 `j_n` 及其物理时延 | 相同物理时延与相位矩阵 |
+| 预编码 | 幅度 | 未归一化，`|V|=1` | 与 plan-024 相同 |
+| 接收机 | 知识 | 双方 known-delay matched/oracle | 相同公平性等级 |
+| 接收机 | DMRS 处理 | 两个零速度 DMRS 等效平均，平均后 LS 噪声方差 `N0/2` | 与 plan-024 相同，不使用首次执行的 2D 联合接口 |
+| 接收机 | 频率估计 | 全带 matched LMMSE；使用各候选真实 TDL-A + CDD 复合协方差 | 与信道匹配所需变化 |
+| 链路 | 调制 / MCS / 码率 | 16QAM / MCS 8 / 553/1024 | 相同 |
+| 链路 | LDPC / LLR clip | 最多 8 次迭代 / 50 | 相同 |
+| 噪声 | 数据噪声方差 | `N0=8/SNR` | 与未归一化 `V` 的 plan-024 定义相同 |
+| 噪声 | LLR 有效噪声 | 只使用 `N0`，不加入 CE-error-aware 项 | 相同 |
+| 随机性 | seed / batch size | 20260716 / 20 | 复用 plan-024 seed 与正式扫描 batch |
+
+对每个 SNR 和 trial，QC 与 Sidon 必须共享同一 TDL realization、payload、平均后 LS noise 和 data noise。
+
+零速度下两个 DMRS symbol 的底层 TDL tap realization 应相同。实现必须先验证这一点，再按 plan-024 语义生成等效平均 LS 观测：
+
+$$
+\bar z_P=g_P+\bar w_P,
+\qquad
+\bar w_P\sim\mathcal{CN}(0,N_0/2).
+$$
+
+matched 频率协方差使用实际 TDL-A 基准协方差与未归一化 CDD 的复合形式：
+
+$$
+R_g(k,l)=R_{TDL}(k,l)
+\sum_{n=0}^{7}V_{k,n}V_{l,n}^{*}.
+$$
+
+#### 5.4 正式扫描前的最小验证
+
+第二部分第 2–4 节以及首次执行已经验证 Sionna TDL 生成器、通用 TDL 协方差、RMMSE 和旧路径回归。本补做不重复 4000-realization 功率检查、经验协方差 Monte Carlo 或多 SNR smoke，只验证本次新增的分数采样延迟及 024 兼容链路：
+
+1. 确定性 preflight：检查两组 `j_n` 到 `d_n/tau_n` 的换算；QC/Sidon `V` 与 `tools/run_experiment024_segment_sidon_qc.py::cdd_V` 的逐元素最大绝对误差不超过 `1e-12`；active、pilot、data 坐标逐项相同且 pilot/data RE 为 48/5712；未归一化 `|V|=1`、数据噪声 `N0=8/SNR`、平均 LS 噪声 `N0/2`；`R_g` Hermitian、半正定、对角为 8，matched LMMSE 矩阵数值有限；
+2. 自动测试：运行现有单元测试，并新增分数采样延迟、相位参考和 `/576` 等价测试；不重复已经通过且本次代码未涉及的独立大样本验证；
+3. 单点端到端 smoke：SNR `14.5 dB`、20 trials、batch size 20，只验证 TDL、CDD、平均 DMRS、matched LMMSE、LDPC、共同随机数、输出字段和相同 seed 重放一致，不据此下性能结论。
+
+preflight、自动测试或单点 smoke 任一失败即停止，修复后重新执行这三项；全部通过后直接进入粗扫。
+
+#### 5.5 正式预算、统计方法与停止条件
+
+粗扫和精扫沿用 plan-024 的两阶段方法，不设置精扫前的人工确认点：
+
+1. 粗扫：SNR `13.0:0.5:18.0 dB`，每点 400 trials，QC/Sidon 成对运行；
+2. 对 10% 和 1% 目标分别使用粗扫的单调化 BLER 序列，为 QC 和 Sidon 找到跨越目标的相邻 0.5 dB 区间；取两个候选区间的并集，以 0.25 dB 间隔生成该目标的精扫网格；
+3. 精扫网格在运行任何精扫 trial 前写入 `refinement_grid.json`，随后直接执行，每点 3000 trials，不再等待研究者确认；
+4. 若任一目标未在 `13–18 dB` 内形成跨越区间，粗扫按相应方向以 0.5 dB 步长自动扩展，每点仍为 400 trials，最多扩展 2 dB；达到扩展上限仍未跨越时，报告目标超出扫描范围，不对该目标拟合或继续增加预算；
+5. 正式点不因结果有利或不利而删除；BLER 非单调点保留并作为有限样本现象报告；
+6. 1% 目标附近任一候选累计错误块少于 30 时，只报告先导 1% 结果，不自动增加 trials；10% 主判据不受此条影响。
+
+每个 SNR 点报告 TB 错误数、trial 数、BLER 和 Wilson 95% 区间。10%/1% 目标 SNR 使用预定精扫区间全部点的二项 logit 拟合；目标 SNR 区间使用 delta method。Sidon 改善定义为：
+
+$$
+G_{Sidon}=SNR_{QC}-SNR_{Sidon},
+$$
+
+正值表示 Sidon 更好。主区间继续采用不利用正配对协方差的保守 95% 近似，同时保存逐点配对四格计数并报告 McNemar 精确检验作为方向性佐证。主结论以目标 SNR 及其预定区间为准，不以 McNemar 汇总替代。
+
+判定分为：
+
+- **保持 plan-024 主结论**：10% 改善至少 0.15 dB，且保守 95% 区间下限不小于 0；
+- **方向保持但未达到原判据**：10% 点估计为正，但小于 0.15 dB或区间跨 0；
+- **持平/不可判定**：点估计接近 0 且区间跨 0，或目标区间数据不足；
+- **显著反向**：10% 改善的保守 95% 区间上限小于 0；
+- 1% 结果单独报告，不替代 10% 主判据。
+
+不要求补做结果数值接近 result-024 的 `+0.33/+0.85 dB`；必须报告相对这两个历史值的差，但不得把差异事后归因于未单独验证的机制。
+
+#### 5.6 代码范围、输出和复现入口
+
+审核通过后预计增量修改：
+
+- `cdd_lls/core/config.py`：CDD delay 支持浮点采样延迟并明确单位；旧整数采样配置语义保持兼容；
+- `cdd_lls/phy/precoding.py`：支持分数采样延迟和显式相位参考，输出 `j_n/d_n/tau_n_s` 元数据；
+- `cdd_lls/phy/estimators.py`：确认 matched TDL + 未归一化 CDD 协方差的幅度标度；
+- `tools/run_plan025_delay_matched_tdl.py`：补做实验入口，不覆盖首次执行输出；
+- `tools/analyze_plan025_sionna_e2.py`：允许读取补做目录并生成同口径目标拟合；
+- `tests/test_precoding.py`、`tests/test_rmmse_time_frequency.py`：增加第 5.4 节对应测试。
+
+固定输出根目录：
 
 ```text
-信道：          Sionna TDL-A
-RMS delay spread：5 ns
-UE 速度：       0 km/h
-载频：          3.5 GHz
-发射/接收：     8 Tx / 1 Rx
-资源：          48 RB × 10 symbols
-DMRS symbols：  [2, 7]
-DMRS comb：     24
-QC delay：      [0,9,18,27,36,45,54,63]
-Sidon delay：   [0,1,3,7,12,20,30,65]
-接收机：        known-delay matched/oracle 二维 RMMSE
-链路：          16QAM、MCS 8、码率 553/1024、8 次 LDPC
+outputs/experiment025_sionna_tdl_rmmse/20260723_delay_matched/
 ```
 
-两个候选使用相同的 TDL realization、payload、LS noise 和 data noise。两个 DMRS symbols 不提前平均，由零速度匹配时间协方差完成联合估计。
+至少包含：
 
-先进行小规模 SNR 扫描定位 10% 和 1% BLER 区域，再在交叉区域增加 trial。报告：
+- `validation/preflight.json`
+- `validation/tests.log`
+- `smoke/`
+- `prescan/sidon_qc_bler.csv`
+- `prescan/paired_error_counts.csv`
+- `refinement_grid.json`
+- `refine_10pct/` 和 `refine_1pct/`
+- `final/final_summary.json`
+- 每个运行目录下的 `resolved_experiment.json`、`environment.json`、`commands.json` 和 UTF-8 日志。
 
-- QC 和 Sidon 的 10% BLER 目标 SNR；
-- 样本足够时的 1% BLER 目标 SNR；
-- Sidon 相对 QC 的 SNR 差和置信区间；
-- 两者的 data-RE CE NMSE；
-- 与 result-024 平坦模型中 0.33 dB 和 0.85 dB 改善的差别。
+`sidon_qc_bler.csv` 至少包含 `design`、`snr_db`、`trials`、`tb_errors`、`bler`、`bler_wilson95_lo`、`bler_wilson95_hi`、`ce_nmse_mean`、`ce_nmse_mean_db`、`estimator_condition_number` 和 `estimator_min_singular_value`。`paired_error_counts.csv` 至少包含每个 SNR 的双方都正确、仅 QC 错误、仅 Sidon 错误、双方都错误四格计数。所有 delay 字段必须在 `resolved_experiment.json` 中带单位保存。
 
-判读方式：
+计划复现命令；具体参数名可在实现时调整，但最终命令必须保存在 `commands.json` 并同步回写 result：
 
-- 若 Sidon 仍显著优于 QC，说明 plan-024 的排序至少保持到 5 ns、零速度 TDL-A；
-- 若优势缩小、消失或反向，按实际结果记录，说明原平坦模型结论不能直接推广；
-- 不把“接近 0.33/0.85 dB”设为代码验收条件；代码正确性由前面的协方差和 RMMSE 验证保证。
+```powershell
+& D:\venvs\cdd-s102\Scripts\python.exe tools\run_plan025_delay_matched_tdl.py --stage validate --run-id 20260723_delay_matched
+& D:\venvs\cdd-s102\Scripts\python.exe tools\run_plan025_delay_matched_tdl.py --stage smoke --snrs 14.5 --trials 20 --batch-size 20 --run-id 20260723_delay_matched
+& D:\venvs\cdd-s102\Scripts\python.exe tools\run_plan025_delay_matched_tdl.py --stage link --snrs 13,13.5,14,14.5,15,15.5,16,16.5,17,17.5,18 --trials 400 --batch-size 20 --run-id 20260723_delay_matched\prescan
+```
 
-unknown-delay 分支也使用相同 realization 运行并单独报告，但不与 known-delay 结果混合拟合。它用于验证接收机不知道 CDD delay 时的性能变化。
+粗扫完成后由分析入口按第 5.5 节自动生成并保存 `refinement_grid.json`；精扫入口读取该文件直接运行，不接受人工临时修改网格。最终实际命令必须保存到 `commands.json`。
+
+#### 5.7 result 必须回答的问题
+
+补做完成后，成对更新 `research/result-025.md` 和 `research/result-025-text.md`，两版结论和数字必须一致，并至少回答：
+
+1. `V` 是否与 plan-024 逐元素一致，物理时延与分数采样转换是否通过；
+2. 除 Sionna TDL-A 5 ns 信道及其 matched 协方差外，是否存在任何未预定的配置变化；
+3. QC/Sidon 的 10% 和样本充分时的 1% 目标 SNR、错误计数、置信区间与 Sidon 改善；
+4. 导频矩阵秩、条件数、最小奇异值，以及 data-RE CE NMSE 差；
+5. 相对 result-024 `+0.33/+0.85 dB` 和首次 `/4096` 执行 `-0.161/-0.582 dB` 的差别；
+6. `H1/H2/H3` 和第 5.4 节验证项逐条是否通过；
+7. 异常、样本不足、适用范围、完整证据路径和复现命令。
 
 ## 三、预计修改文件
 
@@ -313,11 +455,14 @@ tests/test_rmmse_time_frequency.py
 6. 实现 TDL 协方差和二维 known/unknown RMMSE。
 7. 运行单元测试、协方差验证和 RMMSE 验证。
 8. 回放旧路径回归基准，确认软件兼容性通过。
-9. 使用 5 ns、零速度 TDL-A 小规模重跑 plan-024 的 QC/Sidon 对比。
-10. 定位 BLER 交叉区域后增加 trial，完成近似平坦 TDL 对比。
-11. 根据结果决定下一步是否扩展到 3/60 km/h 和更大 delay spread。
+9. 研究者审核并确认第二部分第 5 节补做规格、预算和停止条件；确认前不得执行后续步骤。
+10. 实现分数采样延迟、相位参考和补做入口，不改变旧整数采样配置的既有语义。
+11. 完成第 5.4 节全部验证、单元测试和 smoke；任一失败则停止并修复。
+12. 运行预定 400-trial 粗扫，保存完整配置、计数和日志。
+13. 按粗扫结果自动生成并固化 0.25 dB 精扫网格，随后运行 3000-trial 精扫，不设置人工确认点。
+14. 成对更新 result-025 两版，逐项回答第 5.7 节问题；研究者确认结果后再决定是否扩展到更大 delay spread。
 
-## 五、2026-07-22 执行范围确认
+## 五、2026-07-22 首次执行范围确认（已完成，保留为历史记录）
 
 研究者确认本轮正式链路扫描只执行 plan-024 E2 的 QC/Sidon delay 对比：
 
@@ -328,3 +473,13 @@ tests/test_rmmse_time_frequency.py
 - 若交叉仍落在原区间，1% 区间使用 `16,16.25,16.5,16.75,17,17.25,17.5 dB`，每点 3000 trials；
 - 若 TDL-A 使交叉移出上述精化区间，先报告粗扫结果，再由研究者确认新的精化点；
 - 1% 目标附近任一候选累计错误块少于 30 时，只报告先导结果，不做确定性结论。
+
+首次执行把 QC/Sidon 的整数数组解释为 FFT 采样点并使用 `/4096` 相位分母，因此没有保持 plan-024 的物理时延和预编码矩阵。对应结果只说明该联合配置下的性能，不能回答“仅替换为 TDL-A 5 ns 后 plan-024 排序是否保持”。第二部分第 5 节的补做草案用于消除该混杂。
+
+## 六、2026-07-23 补做审核状态
+
+- 状态：研究者已在 2026-07-23 明确要求按第二部分第 5 节开始实验，视为审核通过；补做已执行完成；
+- 已确认方向：正式扫描前采用最小验证；粗扫和精扫沿用 plan-024 两阶段方法；精扫网格由粗扫自动生成，不再单独请求研究者确认；
+- 执行回执：preflight、自动测试和 smoke 通过后，已完成 400-trial 粗扫、自动精扫网格固化、每点 3000-trial 精扫和结果分析；
+- 结果位置：`research/result-025.md`、`research/result-025-text.md` 和 `outputs/experiment025_sionna_tdl_rmmse/20260723_delay_matched/`；
+- 后续状态：等待研究者审核补做结果；确认前不更新 `KNOWLEDGE.md` 和 `GOALS.md`。

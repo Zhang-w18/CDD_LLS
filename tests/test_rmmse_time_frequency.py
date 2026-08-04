@@ -6,6 +6,7 @@ import numpy as np
 
 from cdd_lls.core.config import ChannelConfig, ResourceConfig
 from cdd_lls.phy.estimators import (
+    build_frequency_rmmse_filter,
     build_time_frequency_rmmse_filter,
     linear_estimator_closed_form_nmse,
     tdl_known_delay_covariance,
@@ -73,6 +74,23 @@ class TimeFrequencyRMMSETests(unittest.TestCase):
         observed = construct_ls_observations(true, noise_variance, np.random.default_rng(1234))
         empirical_by_symbol = np.mean(np.abs(observed) ** 2, axis=(0, 2))
         np.testing.assert_allclose(empirical_by_symbol, noise_variance, atol=0.006, rtol=0.0)
+
+    def test_frequency_rmmse_filter_matches_direct_solve(self):
+        covariance = np.asarray(
+            [[1.0, 0.4 - 0.1j, 0.2], [0.4 + 0.1j, 1.0, 0.3], [0.2, 0.3, 1.0]],
+            dtype=np.complex128,
+        )
+        pilots = np.asarray([0, 2], dtype=np.int64)
+        noise = 0.25
+        filt = build_frequency_rmmse_filter(covariance, pilots, noise)
+        expected = covariance[:, pilots] @ np.linalg.inv(
+            covariance[np.ix_(pilots, pilots)] + noise * np.eye(2)
+        )
+        np.testing.assert_allclose(filt.weights, expected, atol=1e-14, rtol=1e-14)
+        observations = np.asarray([[1.0 + 0.5j, -0.25j]], dtype=np.complex128)
+        np.testing.assert_allclose(
+            filt.estimate_full_band(observations), observations @ expected.T, atol=1e-14, rtol=1e-14
+        )
 
 
 if __name__ == "__main__":

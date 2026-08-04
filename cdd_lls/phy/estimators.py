@@ -50,6 +50,66 @@ class TimeFrequencyRMMSEFilter:
         return estimated.reshape(*original, self.weights.shape[0])
 
 
+@dataclass(frozen=True)
+class FrequencyRMMSEFilter:
+    weights: np.ndarray
+    pilot_local_indices: np.ndarray
+    noise_variance: float
+    condition_number: float
+    minimum_singular_value: float
+    numerical_jitter: float
+
+    def estimate_full_band(self, ls_observations: np.ndarray) -> np.ndarray:
+        obs = np.asarray(ls_observations, dtype=np.complex128)
+        if obs.shape[-1] != self.weights.shape[1]:
+            raise ValueError(
+                f"LS observation has {obs.shape[-1]} pilots; expected {self.weights.shape[1]}."
+            )
+        original = obs.shape[:-1]
+        flat = obs.reshape(-1, obs.shape[-1])
+        estimated = flat @ self.weights.T
+        return estimated.reshape(*original, self.weights.shape[0])
+
+
+def build_frequency_rmmse_filter(
+    frequency_covariance: np.ndarray,
+    pilot_local_indices: np.ndarray,
+    noise_variance: float,
+    diagonal_loading: float = 0.0,
+) -> FrequencyRMMSEFilter:
+    covariance = np.asarray(frequency_covariance, dtype=np.complex128)
+    if covariance.ndim != 2 or covariance.shape[0] != covariance.shape[1]:
+        raise ValueError("Frequency covariance must be square.")
+    pilots = np.asarray(pilot_local_indices, dtype=np.int64).reshape(-1)
+    if pilots.size == 0 or np.any(pilots < 0) or np.any(pilots >= covariance.shape[0]):
+        raise ValueError("Pilot indices are empty or outside the covariance matrix.")
+    r_pp = covariance[np.ix_(pilots, pilots)]
+    r_fp = covariance[:, pilots]
+    jitter = max(float(diagonal_loading), 0.0)
+    identity = np.eye(len(pilots), dtype=np.complex128)
+    system = r_pp + (float(noise_variance) + jitter) * identity
+    for _ in range(8):
+        try:
+            chol = np.linalg.cholesky(system)
+            break
+        except np.linalg.LinAlgError:
+            jitter = max(1e-14, 10.0 * jitter)
+            system = r_pp + (float(noise_variance) + jitter) * identity
+    else:
+        raise np.linalg.LinAlgError("Frequency RMMSE pilot covariance is not positive definite.")
+    solved = np.linalg.solve(chol, r_fp.conj().T)
+    solved = np.linalg.solve(chol.conj().T, solved)
+    singular_values = np.linalg.svd(system, compute_uv=False)
+    return FrequencyRMMSEFilter(
+        weights=solved.conj().T,
+        pilot_local_indices=pilots,
+        noise_variance=float(noise_variance),
+        condition_number=float(singular_values[0] / singular_values[-1]),
+        minimum_singular_value=float(singular_values[-1]),
+        numerical_jitter=float(jitter),
+    )
+
+
 @lru_cache(maxsize=32)
 def _cached_tdl_base_time_frequency_covariance(
     profile: str,
@@ -116,6 +176,46 @@ def tdl_unknown_delay_covariance(
     """Return the baseline TDL covariance without accepting true CDD delays."""
     rt, rf = _tdl_base_time_frequency_covariance(grid, channel)
     return TDLTimeFrequencyCovariance(rt, rf, "tdl_unknown_delay")
+
+
+def tdl_active_frequency_covariance(
+    grid: ResourceGrid,
+    channel: ChannelConfig,
+) -> np.ndarray:
+    """Build the TDL frequency covariance directly on active subcarriers.
+
+    This is algebraically identical to slicing ``tdl_freq_cov_mat`` but avoids
+    materializing its tap-by-``n_fft``-by-``n_fft`` temporary array.  That
+    temporary is several GiB for the plan-026 4096-point FFT even though only
+    576 active subcarriers are used.
+    """
+    from sionna.phy.channel.tr38901 import TDL
+
+    profile = str(channel.tdl_profile).upper()
+    if profile not in ("A", "B", "C", "D", "E"):
+        raise ValueError("Sionna covariance helpers support TDL profiles A through E.")
+    tdl = TDL(
+        model=profile,
+        delay_spread=float(channel.delay_spread_ns) * 1e-9,
+        carrier_frequency=float(channel.carrier_frequency_hz),
+        num_sinusoids=int(channel.num_sinusoids),
+        min_speed=0.0,
+        max_speed=0.0,
+        num_rx_ant=1,
+        num_tx_ant=1,
+        precision="double",
+    )
+    delays = np.asarray(tdl.delays.numpy(), dtype=np.float64).reshape(-1)
+    powers = np.asarray(tdl.mean_powers.numpy(), dtype=np.float64).reshape(-1)
+    powers = powers / np.sum(powers)
+    frequencies = (
+        np.asarray(grid.subcarrier_indices, dtype=np.float64)
+        * float(grid.scs_khz)
+        * 1e3
+    )
+    response = np.exp(-2j * np.pi * delays[:, None] * frequencies[None, :])
+    covariance = response.T @ (powers[:, None] * response.conj())
+    return np.asarray(covariance, dtype=np.complex128)
 
 
 def tdl_known_delay_covariance(

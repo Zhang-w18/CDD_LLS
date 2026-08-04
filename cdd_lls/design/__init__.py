@@ -1,0 +1,53 @@
+"""Reusable CDD design metrics and search helpers."""
+
+from cdd_lls.design.cdd_metrics import (
+    CDDKernel,
+    FrequencyCEMetric,
+    array_factor,
+    build_cdd_kernel,
+    delay_ns_to_grid_coordinates,
+    delay_indices_to_ns,
+    effective_moments_direct,
+    effective_moments_lag,
+    equivalent_cdd_delay_spread,
+    fold_min_gap_indices,
+    jcdd_metrics,
+    pair_sum_min_gap_indices,
+    phase_matrix_from_grid_coordinates,
+    tdl_effective_support,
+)
+from cdd_lls.design.cdd_search import (
+    CDDCandidate,
+    arithmetic_delay_sets,
+    canonical_delay_set,
+    continuous_arithmetic_delays_ns,
+    coordinate_exchange,
+    residues_and_lifts,
+    thick_sidon_requirements,
+    unique_random_delay_sets,
+)
+
+__all__ = [
+    "CDDCandidate",
+    "CDDKernel",
+    "FrequencyCEMetric",
+    "arithmetic_delay_sets",
+    "array_factor",
+    "build_cdd_kernel",
+    "canonical_delay_set",
+    "continuous_arithmetic_delays_ns",
+    "coordinate_exchange",
+    "delay_ns_to_grid_coordinates",
+    "delay_indices_to_ns",
+    "effective_moments_direct",
+    "effective_moments_lag",
+    "equivalent_cdd_delay_spread",
+    "fold_min_gap_indices",
+    "jcdd_metrics",
+    "pair_sum_min_gap_indices",
+    "phase_matrix_from_grid_coordinates",
+    "residues_and_lifts",
+    "thick_sidon_requirements",
+    "tdl_effective_support",
+    "unique_random_delay_sets",
+]

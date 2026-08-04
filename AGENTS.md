@@ -30,6 +30,7 @@
 - `research/plan-NNN.md`：一轮代码修改或正式实验的自包含执行规格。
 - `research/result-NNN.md` 与 `research/result-NNN-text.md`：同一轮正式实验的图文版与可独立核验的无图版。
 - `cdd_lls/`：可复用算法；`run.py`：通用 YAML 入口；`tools/`：专题扫描或分析。
+- `tools/run_bler_curves.py`：static TDL-A 多 candidate BLER 曲线的固定配置入口；用法和配置字段见 `README.md` 的“固定 BLER 曲线入口”。
 - `configs/`：稳定配置；`outputs/`：展开配置、原始数据、日志和未引用图。
 - `docs/reports/`：面向研究者的报告；`docs/figures/`：被 Markdown 引用的图。
 
@@ -46,6 +47,7 @@ Git checkpoint 以完成的任务为单位，不以单次文件编辑为单位�
 ## 5. 实现与证据原则
 
 - 可复用算法放 `cdd_lls/`，不要复制到多个实验脚本。
+- 每次增加或追加符合固定范围的 BLER 曲线时，优先为 `tools/run_bler_curves.py` 新建 YAML 配置并依次执行 `--stage validate`、`--stage run`；不得为只增加场景、candidate、SNR 或 trial 预算而复制链路主循环。已有点追加必须通过 `base_csv` 和绝对 trial 区间继续，禁止从 trial 1 重跑后与旧数据相加。超出 README 声明的固定物理范围时，才扩展入口 schema、实现和测试。
 - 新行为补充测试；无法自动测试时说明原因并执行可复现的 smoke。
 - 实际运行保存展开配置，并核对单位、维度、索引约定、归一化、随机种子和输出字段。
 - `research/` 不保存大规模原始数组；正式产物写入 `outputs/<experiment_name>/<run_id>/`。
@@ -59,6 +61,7 @@ Git checkpoint 以完成的任务为单位，不以单次文件编辑为单位�
 - 目标文件干净时，不为回溯历史而读取 diff；目标文件非干净时，只查看会与当前任务重叠的 diff 片段。避免同时输出完整文件与完整 diff。
 - 工具输出默认限制在可审阅范围内；结果过长时改用筛选、分页或统计摘要。
 - 分析结果时优先读取 `result-NNN-text.md`、CSV/TSV/JSON 和日志；只有布局或图形本身影响判断时才加载图片。
+- 任何任务过程中需要向模型传输图片内容时，先传输该图片对应的数据或文字版；只有不存在可用的数据或文字版时，才直接传输图片。
 - 单个范围明确的文件修改通常不启用多个 Agent。并行任务必须独立、边界不重叠，并要求返回简短结论和精确路径。
 
 ## 7. 编辑与写作

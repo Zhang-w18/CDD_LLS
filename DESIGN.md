@@ -319,7 +319,7 @@ $$
 $$
 P_{\rm out}(\mathbf V;\mathrm{snr},R,\theta)
 =
-\Pr[I_{\rm blk}<R],
+\Pr[I_{\rm blk}< R],
 \qquad
 \mathrm{snr}_p(\mathbf V;R,\theta)
 =
@@ -342,7 +342,7 @@ $$
 当 $R<\mathbb E[I_{\rm blk}]$ 时，Cantelli 不等式给出
 
 $$
-\Pr[I_{\rm blk}<R]
+\Pr[I_{\rm blk}< R]
 \le
 \frac{
 \operatorname{Var}(I_{\rm blk})
@@ -415,7 +415,7 @@ J_{\rm corr}
 \right].
 $$
 
-低成本筛选可截断为 $a_1^2M_2^{\rm eff}+a_2^2M_4^{\rm eff}+a_3^2M_6^{\rm eff}$。纯平坦信道下，这些相关矩汇总对应阶数的 Weyl 和能量；物理展宽信道下，应使用 $\mathbf R_{\rm phy}$ 与设计联合决定的加权相关矩或 PDP 加权核。上述代理只用于筛选和机理分析，最终仍使用 Monte Carlo outage 或链路 BLER。
+这个式子说明只有$J_{\rm corr}$是$\operatorname{Var}(I_{\rm blk})$中的可设计部分。低成本筛选可截断为 $a_1^2M_2^{\rm eff}+a_2^2M_4^{\rm eff}+a_3^2M_6^{\rm eff}$。纯平坦信道下，这些相关矩汇总对应阶数的 Weyl 和能量；物理展宽信道下，应使用 $\mathbf R_{\rm phy}$ 与设计联合决定的加权相关矩或 PDP 加权核。上述代理只用于筛选和机理分析，最终仍使用 Monte Carlo outage 或链路 BLER。
 
 在接收端已知 $\mathbf V$ 和 PDP 的 R2 条件下，最终优化对象是实际信道估计、LLR、LDPC 编译码和译码器均启用时，10% 和 1% estimated-CSI BLER 所需的 SNR。$\mathcal R_\Theta[J_{\rm corr}]$、Monte Carlo outage 和 $\mathcal R_\Theta[L_{\rm CE}]$ 是不同成本和不同精度的筛选或解释指标，不得单独替代最终链路判据。
 

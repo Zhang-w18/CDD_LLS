@@ -1,0 +1,60 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/curve_augmentation_v2
+seed: 20260727
+batch_size: 100
+max_passes: 3
+
+scenes:
+  - scenario_id: A30
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a30_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a30_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a30_comb6/manifest/source_approval.json
+    candidate_ids: all
+    receivers:
+      estimated:
+        base_csv: outputs/experiment028_csi_curves/20260803_main/a30_comb6/final/estimated_csi_curve_points.csv
+        target_errors: 50
+        max_total_trials: 5000
+        stop_below_bler: 0.003
+      ideal:
+        base_csv: outputs/experiment028_csi_curves/20260803_main/a30_comb6/ideal_link/ideal_csi_bler_points.csv
+        target_errors: 50
+        max_total_trials: 5000
+        stop_below_bler: 0.005
+
+  - scenario_id: A100
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    candidate_ids: all
+    receivers:
+      estimated:
+        base_csv: outputs/experiment028_csi_curves/20260803_main/a100_comb6/final/estimated_csi_curve_points.csv
+        target_errors: 50
+        max_total_trials: 5000
+        stop_below_bler: 0.003
+      ideal:
+        base_csv: outputs/experiment028_csi_curves/20260803_main/a100_comb6/ideal_link/ideal_csi_bler_points.csv
+        target_errors: 50
+        max_total_trials: 5000
+        stop_below_bler: 0.005
+
+  - scenario_id: A300
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a300_comb6/comb6/manifest/p28_link_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a300_comb6/comb6/manifest/p28_link_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a300_comb6/comb6/manifest/p28_link_approval.json
+    candidate_ids: all
+    receivers:
+      estimated:
+        base_csv: outputs/experiment028_csi_curves/20260803_main/a300_comb6/final/estimated_csi_curve_points.csv
+        target_errors: 50
+        max_total_trials: 5000
+        stop_below_bler: 0.003
+      ideal:
+        base_csv: outputs/experiment028_csi_curves/20260803_main/a300_comb6/ideal_link/ideal_csi_bler_points.csv
+        target_errors: 50
+        max_total_trials: 5000
+        stop_below_bler: 0.005
