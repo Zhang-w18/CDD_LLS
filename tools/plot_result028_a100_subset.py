@@ -33,11 +33,11 @@ FIGURES = ROOT / "docs/figures/result-028"
 MANIFEST = ROOT / "outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json"
 
 SELECTED = (
-    ("candidate 01", "A100_B0_QC"),
-    ("candidate 02", "A100_AP_RMS_T1"),
-    ("candidate 04", "A100_AP_TU_NT"),
-    ("candidate 07", "A100_S0_SIDON"),
-    ("candidate 10", "A100_MEFF_T2_06"),
+    ("delay set 1", "A100_B0_QC"),
+    ("delay set 2", "A100_AP_RMS_T1"),
+    ("delay set 3", "A100_AP_TU_NT"),
+    ("delay set 4", "A100_S0_SIDON"),
+    ("delay set 5", "A100_MEFF_T2_06"),
 )
 SNR_MAX_DB = 16.0
 X_MIN_DB = 13.75
