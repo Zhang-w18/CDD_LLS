@@ -1,0 +1,60 @@
+schema: pdcch-bler-v1
+output_dir: outputs/experiment029_pdcch/20260902_smoke
+seed: 20260902
+batch_size: 5
+
+antenna:
+  n_tx: 8
+  n_rx: 1
+
+resource:
+  n_rb: 48
+  duration_symbols: 2
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 4
+  first_cce: 0
+
+pdcch:
+  payload_bits: 41
+  coded_bits: 432
+  crc_rnti: 65535
+  scrambling_id: 208
+  data_scrambling_rnti: 0
+  polar_list_size: 8
+  polar_decoder_type: hybSCL
+  polar_cpu_only: true
+  coreset_start_symbol: 0
+  slot_number: 0
+
+precoding:
+  scheme: reg_bundle_dft_cycling
+  cycling_order: [0, 1, 2, 3, 4, 5, 6, 7]
+
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: A
+  delay_spread_ns: 100.0
+  carrier_frequency_hz: 3.5e9
+  ue_speed_kmh: 0.0
+  num_sinusoids: 20
+  normalize: true
+
+receiver:
+  channel_estimation: bundle_ls_linear
+  joint_time_estimation: true
+  llr_clip: 50.0
+
+simulation:
+  snr_points_db: [-8.0, -4.0, 0.0, 4.0]
+  min_trials_per_snr: 20
+  target_errors: 10
+  max_trials_per_snr: 40
+  target_bler: 0.01
+  save_trial_error_flags: true

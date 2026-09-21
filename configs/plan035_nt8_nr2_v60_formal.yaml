@@ -1,0 +1,22 @@
+schema: plan035-pdsch-2rx-v1
+run_kind: formal
+output_dir: outputs/experiment035_pdsch_2rx/20260917_fix1/formal/A100_NT8_NR2_V60
+seed: 20260727
+batch_size: 25
+target_total_trials: 1000
+adaptive_policy:
+  minimum_trials: 1000
+  check_interval_trials: 1000
+  maximum_trials: 50000
+  target_errors_10pct: 200
+  target_errors_1pct: 200
+  ten_pct_error_band: [0.05, 0.2]
+  one_pct_error_band: [0.005, 0.02]
+n_tx: 8
+n_rx: 2
+speed_kmh: 60
+receiver_modes: [estimated, ideal]
+feedback_period_slots: 10
+history_symbol_index: 140
+precoder_normalize: true
+snr_db: [8, 8.25, 8.5, 8.75, 9, 9.25, 9.5, 9.75, 10, 10.25, 10.5, 10.75, 11, 11.25, 11.5, 11.75, 12, 12.25, 12.5, 12.75, 13, 13.25, 13.5, 13.75, 14]

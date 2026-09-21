@@ -1,0 +1,38 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/small_delay_cdd_ideal
+seed: 20260727
+batch_size: 20
+max_passes: 1
+
+scenes:
+  - scenario_id: A100
+    mode: transparent_cdd_physical_covariance
+    plan_section: 16
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_cdd_baselines:
+      - candidate_id: A100_SMALL_CDD_QSTEP0P25_IDEAL_CDD
+        delay_grid_coordinates: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75]
+        family: CDD_SMALL_DELAY_IDEAL_CSI
+        label: small-delay CDD
+        style: {color: "#00a6d6", linestyle: "--", marker: "h"}
+    paired_policy:
+      target_errors: 200
+      min_total_trials: 10000
+      max_total_trials: 50000
+      max_interval_trials: 1000
+    max_snr_tasks_per_run: 11
+    additional_supplement_csvs:
+      ideal:
+        - outputs/experiment028_csi_curves/20260803_main/small_delay_cdd_ideal_shard1/a100/ideal/supplemental_points.csv
+        - outputs/experiment028_csi_curves/20260803_main/small_delay_cdd_ideal_shard2/a100/ideal/supplemental_points.csv
+        - outputs/experiment028_csi_curves/20260803_main/small_delay_cdd_ideal_shard3/a100/ideal/supplemental_points.csv
+    receivers:
+      ideal:
+        snr_db: [14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19]
+        target_errors: 200
+        min_total_trials: 10000
+        max_total_trials: 50000
+        stop_below_bler: null

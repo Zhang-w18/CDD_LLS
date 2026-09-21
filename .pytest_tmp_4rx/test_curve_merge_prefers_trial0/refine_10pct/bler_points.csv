@@ -1,0 +1,2 @@
+scenario_id,candidate_id,family,snr_db,trials,tb_errors,bler,ce_nmse_mean_db
+A30,A30_B0_QC,B0_QC,14.0,3000,300,0.1,-20.0

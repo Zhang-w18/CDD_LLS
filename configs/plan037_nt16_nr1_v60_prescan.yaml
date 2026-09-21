@@ -1,0 +1,14 @@
+schema: plan037-pdsch-tx-scaling-v1
+run_kind: prescan
+output_dir: outputs/experiment037_pdsch_tx_scaling/dev/prescan/A100_NT16_NR1_V60
+seed: 20260727
+batch_size: 8
+target_total_trials: 400
+n_tx: 16
+n_rx: 1
+speed_kmh: 60
+receiver_modes: [estimated, ideal]
+feedback_period_slots: 10
+history_symbol_index: 140
+precoder_normalize: true
+snr_db: [6, 8, 10, 12, 14, 16]

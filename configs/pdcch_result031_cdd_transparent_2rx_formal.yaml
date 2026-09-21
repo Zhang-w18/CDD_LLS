@@ -1,0 +1,75 @@
+schema: pdcch-cdd-bler-v2
+output_dir: outputs/experiment031_pdcch_cdd/20260914_c300_al1_cdd911/transparent_supplement/2rx
+seed: 20260914
+batch_size: 50
+antenna:
+  n_tx: 4
+  n_rx: 2
+resource:
+  n_rb: 48
+  duration_symbols: 2
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 1
+  first_cce: 0
+pdcch:
+  payload_bits: 41
+  coded_bits: 108
+  crc_rnti: 65535
+  scrambling_id: 208
+  data_scrambling_rnti: 0
+  polar_list_size: 8
+  polar_decoder_type: hybSCL
+  polar_cpu_only: true
+  coreset_start_symbol: 0
+  slot_number: 0
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: C
+  delay_spread_ns: 300.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 3.0
+  num_sinusoids: 20
+  normalize: true
+receiver:
+  channel_estimation: frequency_lmmse
+  llr_clip: 50.0
+simulation:
+  snr_points_db: [4.0, 5.0, 6.0, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
+  min_trials_per_snr: 10000
+  target_errors: 200
+  max_trials_per_snr: 50000
+  target_bler: 0.01
+  save_trial_error_flags: true
+  resume: true
+  progress_every_batches: 50
+candidates:
+- candidate_id: CDD911_transparent
+  family: CDD911
+  scheme: cdd
+  receiver_covariance_mode: physical_fullband
+  allow_duplicate_delays: true
+  label: CDD911 transparent
+  delay_grid_coordinates: [0.0, 0.0, 0.98388, 0.98388]
+  style:
+    color: '#9467bd'
+    linestyle: '--'
+    marker: P
+- candidate_id: CDD130_transparent
+  family: CDD130
+  scheme: cdd
+  receiver_covariance_mode: physical_fullband
+  allow_duplicate_delays: true
+  label: CDD130 transparent
+  delay_grid_coordinates: [0.0, 0.0, 0.1404, 0.1404]
+  style:
+    color: '#ff7f0e'
+    linestyle: '--'
+    marker: X
+random_stream_namespace: plan031-cdd-transparent-2rx-formal-v1

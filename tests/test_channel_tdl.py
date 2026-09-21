@@ -5,7 +5,14 @@ import unittest
 import numpy as np
 
 from cdd_lls.core.config import ChannelConfig, ResourceConfig
-from cdd_lls.phy.channel_tdl import generate_sionna_tdl_channel, speed_kmh_to_mps
+from cdd_lls.phy.channel_tdl import (
+    generate_sionna_cdl_channel,
+    generate_sionna_cdl_channel_active,
+    generate_sionna_channel,
+    generate_sionna_tdl_channel,
+    generate_sionna_tdl_channel_active,
+    speed_kmh_to_mps,
+)
 from cdd_lls.phy.precoding import build_precoder, equivalent_channel
 from cdd_lls.phy.resource_grid import build_resource_grid
 from cdd_lls.core.config import TransmissionConfig
@@ -52,6 +59,73 @@ class SionnaTDLChannelTests(unittest.TestCase):
         k = float(self.grid.subcarrier_indices[local])
         expected = np.exp(-1j * 2.0 * np.pi * k * np.asarray(delays) / self.grid.n_fft) / np.sqrt(2.0)
         np.testing.assert_allclose(precoder.C[local], expected, atol=1e-15, rtol=1e-15)
+
+    def test_active_history_sampling_is_replayable_and_selective(self):
+        selected = [0, 14, 15, 16]
+        first = generate_sionna_tdl_channel_active(
+            self.grid,
+            self.channel,
+            2,
+            1,
+            batch_size=2,
+            seed=81,
+            time_sample_indices=selected,
+        )
+        replay = generate_sionna_tdl_channel_active(
+            self.grid,
+            self.channel,
+            2,
+            1,
+            batch_size=2,
+            seed=81,
+            time_sample_indices=selected,
+        )
+        self.assertEqual(first.H.shape, (2, 1, 2, 4, 96))
+        np.testing.assert_array_equal(first.H, replay.H)
+        self.assertEqual(first.metadata["generated_time_steps"], 17)
+        self.assertEqual(first.metadata["selected_time_sample_indices"], selected)
+
+
+class SionnaCDLChannelTests(unittest.TestCase):
+    def setUp(self):
+        self.grid = build_resource_grid(
+            ResourceConfig(n_prbs=4, n_fft=256, pdsch_n_symbols=3, cyclic_prefix_length=18)
+        )
+        self.channel = ChannelConfig(
+            backend="sionna_cdl",
+            model="3gpp_tr38901_cdl",
+            cdl_profile="A",
+            delay_spread_ns=100.0,
+            carrier_frequency_hz=3.5e9,
+            ue_speed_kmh=3.0,
+            cdl_tx_array_rows=1,
+            cdl_tx_array_cols=2,
+            cdl_rx_array_rows=1,
+            cdl_rx_array_cols=1,
+        )
+
+    def test_shape_seed_replay_and_metadata(self):
+        first = generate_sionna_cdl_channel(
+            self.grid, self.channel, n_tx=2, n_rx=1, batch_size=2, seed=1729
+        )
+        replay = generate_sionna_channel(
+            self.grid, self.channel, n_tx=2, n_rx=1, batch_size=2, seed=1729
+        )
+        self.assertEqual(first.H.shape, (2, 1, 2, 3, 48))
+        np.testing.assert_array_equal(first.H, replay.H)
+        self.assertEqual(first.backend, "sionna_cdl")
+        self.assertEqual(first.metadata["tx_array_shape"], [1, 2])
+        self.assertEqual(first.metadata["spatial_correlation_model"], "sionna_cdl_array_geometry")
+        self.assertAlmostEqual(float(np.sum(first.pdp)), 1.0)
+
+    def test_active_generation_matches_full_fft_slice(self):
+        full = generate_sionna_cdl_channel(
+            self.grid, self.channel, n_tx=2, n_rx=1, batch_size=1, seed=91
+        )
+        active = generate_sionna_cdl_channel_active(
+            self.grid, self.channel, n_tx=2, n_rx=1, batch_size=1, seed=91
+        )
+        np.testing.assert_allclose(active.H, full.H, atol=1e-12, rtol=1e-12)
 
 
 if __name__ == "__main__":

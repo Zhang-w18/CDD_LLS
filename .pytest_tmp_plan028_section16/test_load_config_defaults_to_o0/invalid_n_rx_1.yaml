@@ -1,0 +1,5 @@
+schema: bler-curve-runner-v1
+output_dir: D:/07 2026/Simulation/CDD/CDD_LLS-main/CDD_LLS-main/.pytest_tmp_plan028_section16/test_load_config_defaults_to_o0/out
+scenes:
+  - scenario_id: A100
+    n_rx: -1

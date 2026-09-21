@@ -1,0 +1,13 @@
+schema: plan033-tdl-mobility-mimo-v1
+run_kind: smoke
+output_dir: outputs/experiment033_tdl_mobility_mimo/20260915_main/smoke/A100_NT4_NR4_V3
+seed: 20260727
+batch_size: 25
+target_total_trials: 20
+n_tx: 4
+n_rx: 4
+speed_kmh: 3
+feedback_period_slots: 10
+history_symbol_index: 140
+precoder_normalize: true
+snr_db: [-2, 12]

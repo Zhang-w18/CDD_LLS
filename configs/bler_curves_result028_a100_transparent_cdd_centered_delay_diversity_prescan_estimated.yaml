@@ -1,0 +1,48 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/transparent_cdd_centered_delay_diversity_prescan_estimated
+seed: 20260727
+batch_size: 20
+max_passes: 1
+
+scenes:
+  - scenario_id: A100
+    mode: transparent_cdd_physical_covariance
+    plan_section: 13
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_cdd_baselines:
+      - candidate_id: A100_SMALL_CDD_CSTEP0P50_TRANSPARENT_CDD
+        delay_grid_coordinates: [-1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75]
+        family: TRANSPARENT_CDD_CENTERED_SMALL_DELAY_SEARCH
+        label: centered CDD q-step 0.50
+      - candidate_id: A100_SMALL_CDD_CSTEP0P75_TRANSPARENT_CDD
+        delay_grid_coordinates: [-2.625, -1.875, -1.125, -0.375, 0.375, 1.125, 1.875, 2.625]
+        family: TRANSPARENT_CDD_CENTERED_SMALL_DELAY_SEARCH
+        label: centered CDD q-step 0.75
+      - candidate_id: A100_SMALL_CDD_CSTEP1P00_TRANSPARENT_CDD
+        delay_grid_coordinates: [-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5]
+        family: TRANSPARENT_CDD_CENTERED_SMALL_DELAY_SEARCH
+        label: centered CDD q-step 1.00
+      - candidate_id: A100_SMALL_CDD_CSTEP1P25_TRANSPARENT_CDD
+        delay_grid_coordinates: [-4.375, -3.125, -1.875, -0.625, 0.625, 1.875, 3.125, 4.375]
+        family: TRANSPARENT_CDD_CENTERED_SMALL_DELAY_SEARCH
+        label: centered CDD q-step 1.25
+      - candidate_id: A100_SMALL_CDD_CSTEP1P50_TRANSPARENT_CDD
+        delay_grid_coordinates: [-5.25, -3.75, -2.25, -0.75, 0.75, 2.25, 3.75, 5.25]
+        family: TRANSPARENT_CDD_CENTERED_SMALL_DELAY_SEARCH
+        label: centered CDD q-step 1.50
+    paired_policy:
+      target_errors: 1
+      min_total_trials: 300
+      max_total_trials: 300
+      max_interval_trials: 300
+    max_snr_tasks_per_run: 17
+    receivers:
+      estimated:
+        snr_db: [14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5, 20, 20.5, 21, 21.5, 22]
+        target_errors: 1
+        min_total_trials: 300
+        max_total_trials: 300
+        stop_below_bler: null

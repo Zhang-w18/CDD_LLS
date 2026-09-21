@@ -37,6 +37,7 @@ class TimeFrequencyRMMSEFilter:
     condition_number: float
     numerical_jitter: float
     covariance_type: str
+    subfilter_diagnostics: tuple[dict[str, float | int], ...] = ()
 
     def estimate_data(self, ls_observations: np.ndarray) -> np.ndarray:
         obs = np.asarray(ls_observations, dtype=np.complex128)
@@ -58,6 +59,26 @@ class FrequencyRMMSEFilter:
     condition_number: float
     minimum_singular_value: float
     numerical_jitter: float
+
+    def estimate_full_band(self, ls_observations: np.ndarray) -> np.ndarray:
+        obs = np.asarray(ls_observations, dtype=np.complex128)
+        if obs.shape[-1] != self.weights.shape[1]:
+            raise ValueError(
+                f"LS observation has {obs.shape[-1]} pilots; expected {self.weights.shape[1]}."
+            )
+        original = obs.shape[:-1]
+        flat = obs.reshape(-1, obs.shape[-1])
+        estimated = flat @ self.weights.T
+        return estimated.reshape(*original, self.weights.shape[0])
+
+
+@dataclass(frozen=True)
+class PRGFrequencyRMMSEFilter:
+    weights: np.ndarray
+    pilot_local_indices: np.ndarray
+    prg_size_subcarriers: int
+    noise_variance: float
+    prg_diagnostics: tuple[dict[str, float | int], ...]
 
     def estimate_full_band(self, ls_observations: np.ndarray) -> np.ndarray:
         obs = np.asarray(ls_observations, dtype=np.complex128)
@@ -107,6 +128,76 @@ def build_frequency_rmmse_filter(
         condition_number=float(singular_values[0] / singular_values[-1]),
         minimum_singular_value=float(singular_values[-1]),
         numerical_jitter=float(jitter),
+    )
+
+
+def build_prg_frequency_rmmse_filter(
+    frequency_covariance: np.ndarray,
+    pilot_local_indices: np.ndarray,
+    prg_size_subcarriers: int,
+    noise_variance: float,
+    diagonal_loading: float = 0.0,
+) -> PRGFrequencyRMMSEFilter:
+    """Build independent matched frequency-LMMSE filters inside each PRG."""
+    covariance = np.asarray(frequency_covariance, dtype=np.complex128)
+    if covariance.ndim != 2 or covariance.shape[0] != covariance.shape[1]:
+        raise ValueError("Frequency covariance must be square.")
+    prg_size = int(prg_size_subcarriers)
+    if prg_size <= 0 or covariance.shape[0] % prg_size:
+        raise ValueError("prg_size_subcarriers must divide the covariance dimension.")
+    pilots = np.asarray(pilot_local_indices, dtype=np.int64).reshape(-1)
+    if pilots.size == 0 or np.any(pilots < 0) or np.any(pilots >= covariance.shape[0]):
+        raise ValueError("Pilot indices are empty or outside the covariance matrix.")
+    weights = np.zeros((covariance.shape[0], len(pilots)), dtype=np.complex128)
+    diagnostics: list[dict[str, float | int]] = []
+    base_loading = max(float(diagonal_loading), 0.0)
+    for prg_index, start in enumerate(range(0, covariance.shape[0], prg_size)):
+        stop = start + prg_size
+        target = np.arange(start, stop, dtype=np.int64)
+        pilot_columns = np.flatnonzero((pilots >= start) & (pilots < stop))
+        if pilot_columns.size == 0:
+            raise ValueError(f"PRG {prg_index} has no pilots.")
+        pilot = pilots[pilot_columns]
+        r_pp = covariance[np.ix_(pilot, pilot)]
+        r_tp = covariance[np.ix_(target, pilot)]
+        jitter = base_loading
+        identity = np.eye(len(pilot), dtype=np.complex128)
+        system = r_pp + (float(noise_variance) + jitter) * identity
+        for _ in range(8):
+            try:
+                chol = np.linalg.cholesky(system)
+                break
+            except np.linalg.LinAlgError:
+                jitter = max(1e-14, 10.0 * jitter)
+                system = r_pp + (float(noise_variance) + jitter) * identity
+        else:
+            raise np.linalg.LinAlgError(f"PRG {prg_index} LMMSE system is not positive definite.")
+        solved = np.linalg.solve(chol, r_tp.conj().T)
+        solved = np.linalg.solve(chol.conj().T, solved)
+        local_weights = solved.conj().T
+        weights[np.ix_(target, pilot_columns)] = local_weights
+        singular = np.linalg.svd(system, compute_uv=False)
+        error = covariance[np.ix_(target, target)] - local_weights @ r_tp.conj().T
+        signal_trace = float(np.real(np.trace(covariance[np.ix_(target, target)])))
+        error_trace = max(float(np.real(np.trace(error))), 0.0)
+        diagnostics.append(
+            {
+                "prg_index": prg_index,
+                "start_subcarrier": start,
+                "stop_subcarrier_exclusive": stop,
+                "pilot_count": int(len(pilot)),
+                "condition_number": float(singular[0] / singular[-1]),
+                "minimum_singular_value": float(singular[-1]),
+                "numerical_jitter": float(jitter),
+                "analytic_trace_nmse": error_trace / signal_trace,
+            }
+        )
+    return PRGFrequencyRMMSEFilter(
+        weights=weights,
+        pilot_local_indices=pilots,
+        prg_size_subcarriers=prg_size,
+        noise_variance=float(noise_variance),
+        prg_diagnostics=tuple(diagnostics),
     )
 
 
@@ -218,6 +309,29 @@ def tdl_active_frequency_covariance(
     return np.asarray(covariance, dtype=np.complex128)
 
 
+def tdl_active_time_frequency_covariance(
+    grid: ResourceGrid,
+    channel: ChannelConfig,
+) -> TDLTimeFrequencyCovariance:
+    """Build separable TDL covariance without a full-FFT covariance temporary."""
+    from sionna.phy.ofdm import tdl_time_cov_mat
+
+    profile = str(channel.tdl_profile).upper()
+    time = np.asarray(
+        tdl_time_cov_mat(
+            model=profile,
+            speed=float(channel.ue_speed_kmh) / 3.6,
+            carrier_frequency=float(channel.carrier_frequency_hz),
+            ofdm_symbol_duration=float(grid.ofdm_symbol_duration_s),
+            num_ofdm_symbols=int(grid.n_symbols),
+            precision="double",
+        ).numpy(),
+        dtype=np.complex128,
+    )
+    frequency = tdl_active_frequency_covariance(grid, channel)
+    return TDLTimeFrequencyCovariance(time, frequency, "tdl_active_time_frequency")
+
+
 def tdl_known_delay_covariance(
     grid: ResourceGrid,
     channel: ChannelConfig,
@@ -233,6 +347,80 @@ def tdl_known_delay_covariance(
         axis=2,
     )
     return TDLTimeFrequencyCovariance(rt, rf * cdd_factor, "tdl_cdd_known_delay")
+
+
+def cdl_spatial_unaware_covariance(
+    grid: ResourceGrid,
+    channel: ChannelConfig,
+    delays: List[int] | None = None,
+) -> TDLTimeFrequencyCovariance:
+    """Approximate CDL covariance from its cluster PDP and Jakes Doppler.
+
+    The generated CDL channel retains array-geometry spatial correlation. This
+    receiver covariance intentionally omits that spatial correlation and is
+    therefore not a fully matched CDL covariance.
+    """
+    from sionna.phy.channel.tr38901 import CDL, PanelArray
+    from sionna.phy.ofdm import tdl_time_cov_mat
+
+    carrier = float(channel.carrier_frequency_hz)
+    single = PanelArray(
+        num_rows_per_panel=1,
+        num_cols_per_panel=1,
+        polarization="single",
+        polarization_type="V",
+        antenna_pattern="omni",
+        carrier_frequency=carrier,
+        precision="double",
+    )
+    cdl = CDL(
+        model=str(channel.cdl_profile).upper(),
+        delay_spread=float(channel.delay_spread_ns) * 1e-9,
+        carrier_frequency=carrier,
+        ut_array=single,
+        bs_array=single,
+        direction="downlink",
+        min_speed=0.0,
+        max_speed=0.0,
+        precision="double",
+    )
+    path_delays = np.asarray(cdl.delays.numpy(), dtype=np.float64).reshape(-1)
+    powers = np.asarray(cdl.powers.numpy(), dtype=np.float64).reshape(-1)
+    powers = powers / np.sum(powers)
+    frequencies = np.asarray(grid.subcarrier_indices, dtype=np.float64) * float(grid.scs_khz) * 1e3
+    response = np.exp(-2j * np.pi * path_delays[:, None] * frequencies[None, :])
+    frequency = response.T @ (powers[:, None] * response.conj())
+    time = np.asarray(
+        tdl_time_cov_mat(
+            model="A",
+            speed=float(channel.ue_speed_kmh) / 3.6,
+            carrier_frequency=carrier,
+            ofdm_symbol_duration=float(grid.ofdm_symbol_duration_s),
+            num_ofdm_symbols=int(grid.n_symbols),
+            precision="double",
+        ).numpy(),
+        dtype=np.complex128,
+    )
+    covariance_type = "cdl_pdp_doppler_spatial_unaware"
+    if delays is not None:
+        normalized = normalize_delay_vector(delays, n_tx=len(delays))
+        k = np.asarray(grid.subcarrier_indices, dtype=np.float64)
+        delta = k[:, None] - k[None, :]
+        artificial = np.asarray(normalized, dtype=np.float64)
+        cdd_factor = np.mean(
+            np.exp(
+                -1j
+                * 2.0
+                * np.pi
+                * delta[:, :, None]
+                * artificial[None, None, :]
+                / float(grid.n_fft)
+            ),
+            axis=2,
+        )
+        frequency = frequency * cdd_factor
+        covariance_type += "_cdd_known_delay"
+    return TDLTimeFrequencyCovariance(time, frequency, covariance_type)
 
 
 def coordinate_covariance(
@@ -259,9 +447,21 @@ def build_time_frequency_rmmse_filter(
     covariance: TDLTimeFrequencyCovariance,
     noise_variance: float,
     diagonal_loading: float = 0.0,
+    pilot_coordinates: np.ndarray | None = None,
+    data_coordinates: np.ndarray | None = None,
 ) -> TimeFrequencyRMMSEFilter:
-    pilot = np.asarray(grid.pilot_coordinates, dtype=np.int64)
-    data = np.asarray(grid.data_coordinates, dtype=np.int64)
+    pilot = np.asarray(
+        grid.pilot_coordinates if pilot_coordinates is None else pilot_coordinates,
+        dtype=np.int64,
+    )
+    data = np.asarray(
+        grid.data_coordinates if data_coordinates is None else data_coordinates,
+        dtype=np.int64,
+    )
+    if pilot.ndim != 2 or data.ndim != 2 or pilot.shape[1] != 2 or data.shape[1] != 2:
+        raise ValueError("Pilot and data coordinates must have shape [n_re,2].")
+    if len(pilot) == 0 or len(data) == 0:
+        raise ValueError("Pilot and data coordinate sets must not be empty.")
     r_pp = coordinate_covariance(grid, covariance.time, covariance.frequency, pilot, pilot)
     r_dp = coordinate_covariance(grid, covariance.time, covariance.frequency, data, pilot)
     jitter = max(float(diagonal_loading), 0.0)
@@ -287,6 +487,65 @@ def build_time_frequency_rmmse_filter(
         condition_number=float(np.linalg.cond(system)),
         numerical_jitter=float(jitter),
         covariance_type=str(covariance.covariance_type),
+    )
+
+
+def build_prg_time_frequency_rmmse_filter(
+    grid: ResourceGrid,
+    covariance: TDLTimeFrequencyCovariance,
+    prg_size_subcarriers: int,
+    noise_variance: float,
+    diagonal_loading: float = 0.0,
+) -> TimeFrequencyRMMSEFilter:
+    """Build one block-diagonal 2D RMMSE filter without crossing PRG edges."""
+    prg_size = int(prg_size_subcarriers)
+    if prg_size <= 0 or int(grid.n_sc) % prg_size:
+        raise ValueError("prg_size_subcarriers must divide the active bandwidth.")
+    pilot = np.asarray(grid.pilot_coordinates, dtype=np.int64)
+    data = np.asarray(grid.data_coordinates, dtype=np.int64)
+    pilot_local = local_indices_for_subcarriers(grid, pilot[:, 1])
+    data_local = local_indices_for_subcarriers(grid, data[:, 1])
+    weights = np.zeros((len(data), len(pilot)), dtype=np.complex128)
+    diagnostics: list[dict[str, float | int]] = []
+    maximum_condition = 0.0
+    maximum_jitter = 0.0
+    for prg_index, start in enumerate(range(0, int(grid.n_sc), prg_size)):
+        stop = start + prg_size
+        pilot_rows = np.flatnonzero((pilot_local >= start) & (pilot_local < stop))
+        data_rows = np.flatnonzero((data_local >= start) & (data_local < stop))
+        if len(pilot_rows) == 0 or len(data_rows) == 0:
+            raise ValueError(f"PRG {prg_index} has no pilot or data coordinates.")
+        local = build_time_frequency_rmmse_filter(
+            grid,
+            covariance,
+            noise_variance,
+            diagonal_loading=diagonal_loading,
+            pilot_coordinates=pilot[pilot_rows],
+            data_coordinates=data[data_rows],
+        )
+        weights[np.ix_(data_rows, pilot_rows)] = local.weights
+        maximum_condition = max(maximum_condition, float(local.condition_number))
+        maximum_jitter = max(maximum_jitter, float(local.numerical_jitter))
+        diagnostics.append(
+            {
+                "prg_index": prg_index,
+                "start_subcarrier": start,
+                "stop_subcarrier_exclusive": stop,
+                "pilot_re_count": int(len(pilot_rows)),
+                "data_re_count": int(len(data_rows)),
+                "condition_number": float(local.condition_number),
+                "numerical_jitter": float(local.numerical_jitter),
+            }
+        )
+    return TimeFrequencyRMMSEFilter(
+        weights=weights,
+        pilot_coordinates=pilot,
+        data_coordinates=data,
+        noise_variance=float(noise_variance),
+        condition_number=maximum_condition,
+        numerical_jitter=maximum_jitter,
+        covariance_type=f"{covariance.covariance_type}_prg{prg_size}",
+        subfilter_diagnostics=tuple(diagnostics),
     )
 
 

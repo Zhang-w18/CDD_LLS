@@ -1,0 +1,14 @@
+schema: plan032-tdl-mobility-v1
+run_kind: formal
+output_dir: outputs/experiment032_tdl_mobility/20260906_main/formal_shard2
+seed: 20260727
+batch_size: 20
+target_total_trials: 3000
+speed_kmh: 60
+feedback_period_slots: 10
+history_symbol_index: 140
+snr_db: [18, 18.25, 18.5]
+manifest:
+  path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+  sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+  approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json

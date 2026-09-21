@@ -1,0 +1,12 @@
+{
+  "A300_B0_QC": {
+    "color": "#111111",
+    "linestyle": "-",
+    "marker": "o"
+  },
+  "A300_S0_SIDON": {
+    "color": "#9467bd",
+    "linestyle": "-",
+    "marker": "o"
+  }
+}

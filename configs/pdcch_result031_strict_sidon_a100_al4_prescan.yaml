@@ -1,0 +1,19 @@
+schema: pdcch-cdd-bler-v2
+output_dir: outputs/experiment031_pdcch_cdd/20260908_strict_sidon_search/prescan/a100_al4
+seed: 20260908
+batch_size: 100
+antenna: {n_tx: 8, n_rx: 1}
+resource: {n_rb: 48, duration_symbols: 1, n_fft: 4096, scs_khz: 30, cyclic_prefix_length: 288, cce_reg_mapping: noninterleaved, reg_bundle_size: 6, interleaver_size: 2, shift_index: 0, aggregation_level: 4, first_cce: 0}
+pdcch: {payload_bits: 41, coded_bits: 432, crc_rnti: 65535, scrambling_id: 208, data_scrambling_rnti: 0, polar_list_size: 8, polar_decoder_type: hybSCL, polar_cpu_only: true, coreset_start_symbol: 0, slot_number: 0}
+channel: {backend: sionna_tdl, model: tdl, tdl_profile: A, delay_spread_ns: 100.0, carrier_frequency_hz: 3.5e9, ue_speed_kmh: 0.0, num_sinusoids: 20, normalize: true}
+receiver: {channel_estimation: frequency_lmmse, llr_clip: 50.0}
+simulation: {snr_points_db: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7], min_trials_per_snr: 300, target_errors: 1000000, max_trials_per_snr: 300, target_bler: 0.01, save_trial_error_flags: true, resume: true, progress_every_batches: 1}
+candidates:
+  - {candidate_id: A100_SIDON8_AL4_01, family: STRICT_SIDON, scheme: cdd, strict_sidon: true, label: A100 Sidon8 AL4 01 (S0), delay_grid_coordinates: [0, 1, 3, 7, 12, 20, 30, 65]}
+  - {candidate_id: A100_SIDON8_AL4_02, family: STRICT_SIDON, scheme: cdd, strict_sidon: true, label: A100 Sidon8 AL4 02, delay_grid_coordinates: [0, 4, 20, 33, 96, 155, 203, 253]}
+  - {candidate_id: A100_SIDON8_AL4_03, family: STRICT_SIDON, scheme: cdd, strict_sidon: true, label: A100 Sidon8 AL4 03, delay_grid_coordinates: [0, 7, 54, 64, 89, 181, 243, 262]}
+  - {candidate_id: A100_SIDON8_AL4_04, family: STRICT_SIDON, scheme: cdd, strict_sidon: true, label: A100 Sidon8 AL4 04, delay_grid_coordinates: [0, 23, 53, 99, 138, 183, 215, 241]}
+  - {candidate_id: A100_SIDON8_AL4_05, family: STRICT_SIDON, scheme: cdd, strict_sidon: true, label: A100 Sidon8 AL4 05, delay_grid_coordinates: [0, 3, 11, 145, 183, 252, 272, 284]}
+  - {candidate_id: A100_SIDON8_AL4_06, family: STRICT_SIDON, scheme: cdd, strict_sidon: true, label: A100 Sidon8 AL4 06, delay_grid_coordinates: [0, 1, 9, 14, 25, 42, 90, 252]}
+  - {candidate_id: A100_SIDON8_AL4_07, family: STRICT_SIDON, scheme: cdd, strict_sidon: true, label: A100 Sidon8 AL4 07, delay_grid_coordinates: [0, 1, 14, 48, 107, 135, 152, 219]}
+  - {candidate_id: A100_SIDON8_AL4_08, family: STRICT_SIDON, scheme: cdd, strict_sidon: true, label: A100 Sidon8 AL4 08, delay_grid_coordinates: [0, 4, 48, 63, 116, 152, 195, 280]}

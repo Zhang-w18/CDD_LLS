@@ -7,12 +7,14 @@ import numpy as np
 from cdd_lls.core.config import ChannelConfig, ResourceConfig
 from cdd_lls.phy.estimators import (
     build_frequency_rmmse_filter,
+    build_prg_time_frequency_rmmse_filter,
     build_time_frequency_rmmse_filter,
     linear_estimator_closed_form_nmse,
+    tdl_active_time_frequency_covariance,
     tdl_known_delay_covariance,
     tdl_unknown_delay_covariance,
 )
-from cdd_lls.phy.resource_grid import build_resource_grid
+from cdd_lls.phy.resource_grid import build_resource_grid, local_indices_for_subcarriers
 from cdd_lls.sim.orchestrator import construct_ls_observations
 
 
@@ -91,6 +93,60 @@ class TimeFrequencyRMMSETests(unittest.TestCase):
         np.testing.assert_allclose(
             filt.estimate_full_band(observations), observations @ expected.T, atol=1e-14, rtol=1e-14
         )
+
+    def test_static_two_dmrs_2d_filter_equals_averaged_frequency_filter(self):
+        channel0 = ChannelConfig(**{**self.channel3.__dict__, "ue_speed_kmh": 0.0})
+        covariance = tdl_active_time_frequency_covariance(self.grid, channel0)
+        observation_noise = 0.4
+        joint = build_time_frequency_rmmse_filter(
+            self.grid, covariance, observation_noise, diagonal_loading=1e-12
+        )
+        pilot_local = local_indices_for_subcarriers(
+            self.grid, self.grid.pilot_subcarriers
+        )
+        frequency = build_frequency_rmmse_filter(
+            covariance.frequency,
+            pilot_local,
+            observation_noise / 2.0,
+            diagonal_loading=1e-12,
+        )
+        rng = np.random.default_rng(90210)
+        observations = rng.normal(size=(3, self.grid.n_dmrs_re)) + 1j * rng.normal(
+            size=(3, self.grid.n_dmrs_re)
+        )
+        averaged = 0.5 * (
+            observations[:, : self.grid.pilot_count]
+            + observations[:, self.grid.pilot_count :]
+        )
+        frequency_full = frequency.estimate_full_band(averaged)
+        data_local = local_indices_for_subcarriers(
+            self.grid, self.grid.data_subcarrier_indices
+        )
+        np.testing.assert_allclose(
+            joint.estimate_data(observations),
+            frequency_full[:, data_local],
+            atol=2e-10,
+            rtol=2e-10,
+        )
+
+    def test_prg_time_frequency_filter_has_no_cross_prg_weights(self):
+        covariance = tdl_active_time_frequency_covariance(self.grid, self.channel3)
+        filt = build_prg_time_frequency_rmmse_filter(
+            self.grid,
+            covariance,
+            prg_size_subcarriers=48,
+            noise_variance=0.2,
+            diagonal_loading=1e-12,
+        )
+        pilot_local = local_indices_for_subcarriers(
+            self.grid, self.grid.pilot_subcarrier_indices
+        )
+        data_local = local_indices_for_subcarriers(
+            self.grid, self.grid.data_subcarrier_indices
+        )
+        cross = (data_local[:, None] // 48) != (pilot_local[None, :] // 48)
+        np.testing.assert_array_equal(filt.weights[cross], 0.0)
+        self.assertEqual(len(filt.subfilter_diagnostics), 2)
 
 
 if __name__ == "__main__":

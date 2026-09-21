@@ -1,0 +1,57 @@
+{
+  "schema": "plan028-transparent-prg-manifest-v1",
+  "status": "researcher_confirmed_plan028_section15",
+  "plan": "research/plan-028.md#15-a100-8tx1rx-第-36-节两条曲线的-snr-延伸",
+  "scenario_id": "A100",
+  "source_manifest_sha256": "source-sha256",
+  "system": {
+    "n_prbs": 48,
+    "active_subcarriers": 576,
+    "subcarrier_spacing_hz": 30000.0,
+    "n_tx": 8,
+    "n_rx": 1,
+    "layers": 1,
+    "tdl_profile": "A",
+    "delay_spread_ns": 100.0,
+    "ue_speed_kmh": 0.0,
+    "dmrs_spacing_subcarriers": 6,
+    "dmrs_symbol_indices": [
+      2,
+      7
+    ],
+    "data_re": 5568,
+    "mcs_table": "nr_256qam",
+    "mcs_index": 8
+  },
+  "precoder": {
+    "codebook": "8x8 spatial DFT",
+    "coefficient_magnitude": 1.0,
+    "vector_power": 8.0,
+    "phase_sign": "negative",
+    "prg_reference": "first_active_rb"
+  },
+  "randomization": {
+    "generator": "numpy.random.Generator(PCG64)",
+    "base_seed": 20260727,
+    "seed_fields": [
+      "base_seed",
+      "candidate_id",
+      "snr_db",
+      "absolute_trial_index",
+      "tail_prg_order"
+    ]
+  },
+  "candidates": [
+    {
+      "candidate_id": "A100_PRG_DFT8_6RB",
+      "family": "TRANSPARENT_PRG_DFT",
+      "prg_size_rb": 6,
+      "mapping": "cycle_all"
+    }
+  ],
+  "paired_policy": {
+    "target_errors": 200,
+    "min_total_trials": 10000,
+    "max_total_trials": 50000
+  }
+}

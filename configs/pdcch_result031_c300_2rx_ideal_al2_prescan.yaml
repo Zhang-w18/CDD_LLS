@@ -1,0 +1,185 @@
+schema: pdcch-cdd-bler-v2
+output_dir: D:\07 2026\Simulation\CDD\CDD_LLS-main\CDD_LLS-main\outputs\experiment031_pdcch_cdd\20260911_c300_4tx_2rx_2sym\prescan\ideal\al2
+seed: 20260911
+batch_size: 50
+antenna:
+  n_tx: 4
+  n_rx: 2
+resource:
+  n_rb: 48
+  duration_symbols: 2
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 2
+  first_cce: 0
+pdcch:
+  payload_bits: 41
+  coded_bits: 216
+  crc_rnti: 65535
+  scrambling_id: 208
+  data_scrambling_rnti: 0
+  polar_list_size: 8
+  polar_decoder_type: hybSCL
+  polar_cpu_only: true
+  coreset_start_symbol: 0
+  slot_number: 0
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: C
+  delay_spread_ns: 300.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 3.0
+  num_sinusoids: 20
+  normalize: true
+receiver:
+  channel_estimation: ideal
+  llr_clip: 50.0
+simulation:
+  snr_points_db:
+  - -12.0
+  - -10.0
+  - -8.0
+  - -6.0
+  - -4.0
+  - -2.0
+  - 0.0
+  - 2.0
+  - 4.0
+  - 6.0
+  - 8.0
+  - 10.0
+  - 12.0
+  - 14.0
+  - 16.0
+  - 18.0
+  min_trials_per_snr: 300
+  target_errors: 1000000
+  max_trials_per_snr: 300
+  target_bler: 0.01
+  save_trial_error_flags: true
+  resume: true
+candidates:
+- candidate_id: C300_B0_QC
+  family: B0_QC
+  scheme: cdd
+  label: C300 B0 QC
+  delay_grid_coordinates:
+  - 0
+  - 1.125
+  - 2.25
+  - 3.375
+  style:
+    color: '#111111'
+    linestyle: '-'
+    marker: o
+- candidate_id: C300_S0_SIDON
+  family: S0_SIDON
+  scheme: cdd
+  label: C300 S0 Sidon
+  delay_grid_coordinates:
+  - 0
+  - 1
+  - 3
+  - 7
+  style:
+    color: '#1f77b4'
+    linestyle: --
+    marker: s
+- candidate_id: C300_AP_RMS_T1
+  family: AP_RMS_T1
+  scheme: cdd
+  label: C300 AP RMS T1
+  delay_grid_coordinates:
+  - 0
+  - 0.648
+  - 1.296
+  - 1.944
+  style:
+    color: '#7f7f7f'
+    linestyle: -.
+    marker: ^
+- candidate_id: C300_AP_TEPS_T1
+  family: AP_TEPS_T1
+  scheme: cdd
+  label: C300 AP Teps T1
+  delay_grid_coordinates:
+  - 0
+  - 4.086612
+  - 8.173224
+  - 12.259836
+  style:
+    color: '#bcbd22'
+    linestyle: ':'
+    marker: v
+- candidate_id: C300_GEO_T1_CTRL_BAL
+  family: GEO_T1_CTRL
+  scheme: cdd
+  label: C300 GEO balanced
+  delay_grid_coordinates:
+  - 0
+  - 4
+  - 12
+  - 33
+  style:
+    color: '#9467bd'
+    linestyle: '-'
+    marker: D
+- candidate_id: C300_GEO_T1_CTRL_PAIR
+  family: GEO_T1_CTRL
+  scheme: cdd
+  label: C300 GEO pair
+  delay_grid_coordinates:
+  - 0
+  - 5
+  - 16
+  - 49
+  style:
+    color: '#ff7f0e'
+    linestyle: -.
+    marker: <
+- candidate_id: C300_GEO_T1_CTRL_FOLD
+  family: GEO_T1_CTRL
+  scheme: cdd
+  label: C300 GEO fold
+  delay_grid_coordinates:
+  - 0
+  - 4
+  - 10
+  - 32
+  style:
+    color: '#8c564b'
+    linestyle: --
+    marker: P
+- candidate_id: C300_PRG_DFT4_6REG
+  family: PRG_DFT
+  scheme: reg_bundle_dft_cycling
+  receiver_covariance_mode: physical_prg
+  label: C300 PRG DFT4 6REG transparent
+  cycling_order:
+  - 0
+  - 1
+  style:
+    color: '#2ca02c'
+    linestyle: --
+    marker: '>'
+- candidate_id: C300_SMALL_CDD_QSTEP0P25_IDEAL_CSI
+  family: SMALL_CDD
+  scheme: cdd
+  receiver_covariance_mode: matched_effective
+  label: C300 small CDD ideal CSI
+  delay_grid_coordinates:
+  - 0
+  - 0.03125
+  - 0.0625
+  - 0.09375
+  style:
+    color: '#17becf'
+    linestyle: -.
+    marker: h
+random_stream_namespace: c300-2rx-ideal-prescan-v1

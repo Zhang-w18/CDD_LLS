@@ -1,0 +1,27 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/transparent_prg_6rb_1pct_extension_shard1
+seed: 20260727
+batch_size: 20
+max_passes: 1
+scenes:
+  - scenario_id: A100
+    n_rx: 1
+    mode: transparent_prg_dft
+    plan_section: 15
+    run_kind: formal
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_prg_baselines:
+      - {candidate_id: A100_PRG_DFT8_6RB, family: TRANSPARENT_PRG_DFT, label: transparent PRG 6 RB, prg_size_rb: 6, mapping: cycle_all, style: {color: "#66a61e", linestyle: "-.", marker: ">"}}
+    paired_policy: {target_errors: 200, min_total_trials: 10000, max_total_trials: 50000, max_interval_trials: 1000}
+    max_snr_tasks_per_run: 2
+    run_snr_db: [16.25, 16.5]
+    receivers:
+      estimated:
+        base_csv: outputs/experiment028_csi_curves/20260803_main/transparent_prg_6rb_1pct_extension/a100/final/estimated_csi_bler_points.csv
+        target_errors: 200
+        min_total_trials: 10000
+        max_total_trials: 50000
+        stop_below_bler: null

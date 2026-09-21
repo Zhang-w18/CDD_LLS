@@ -1,0 +1,40 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/transparent_cdd_optimized_offset_diversity_prescan_ideal
+seed: 20260727
+batch_size: 20
+max_passes: 1
+
+scenes:
+  - scenario_id: A100
+    mode: transparent_cdd_physical_covariance
+    plan_section: 13
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_cdd_baselines:
+      - candidate_id: A100_SMALL_CDD_OQ0P50_AM1P00_TRANSPARENT_CDD
+        delay_grid_coordinates: [-1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5]
+        family: TRANSPARENT_CDD_OPTIMIZED_OFFSET_SEARCH
+        label: offset-optimized CDD q-step 0.50
+      - candidate_id: A100_SMALL_CDD_OQ0P60_AM0P75_TRANSPARENT_CDD
+        delay_grid_coordinates: [-0.75, -0.15, 0.45, 1.05, 1.65, 2.25, 2.85, 3.45]
+        family: TRANSPARENT_CDD_OPTIMIZED_OFFSET_SEARCH
+        label: offset-optimized CDD q-step 0.60
+      - candidate_id: A100_SMALL_CDD_OQ0P70_AM0P75_TRANSPARENT_CDD
+        delay_grid_coordinates: [-0.75, -0.05, 0.65, 1.35, 2.05, 2.75, 3.45, 4.15]
+        family: TRANSPARENT_CDD_OPTIMIZED_OFFSET_SEARCH
+        label: offset-optimized CDD q-step 0.70
+    paired_policy:
+      target_errors: 1
+      min_total_trials: 300
+      max_total_trials: 300
+      max_interval_trials: 300
+    max_snr_tasks_per_run: 8
+    receivers:
+      ideal:
+        snr_db: [14, 14.25, 14.5, 14.75, 15, 15.5, 15.75, 16]
+        target_errors: 1
+        min_total_trials: 300
+        max_total_trials: 300
+        stop_below_bler: null

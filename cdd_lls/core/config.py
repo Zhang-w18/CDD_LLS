@@ -36,10 +36,21 @@ class ChannelConfig:
     backend: str = "legacy_exponential"
     model: str = "tdl"
     tdl_profile: str = "A"
+    cdl_profile: str = "A"
     delay_spread_ns: float = 30.0
     carrier_frequency_hz: float = 3.5e9
     ue_speed_kmh: float = 0.0
     num_sinusoids: int = 20
+    cdl_direction: str = "downlink"
+    cdl_tx_array_rows: int = 1
+    cdl_tx_array_cols: int = 0
+    cdl_rx_array_rows: int = 1
+    cdl_rx_array_cols: int = 0
+    cdl_polarization: str = "single"
+    cdl_polarization_type: str = "V"
+    cdl_antenna_pattern: str = "omni"
+    cdl_element_vertical_spacing: float = 0.5
+    cdl_element_horizontal_spacing: float = 0.5
     pdp: str = "exponential"
     max_delay_factor: float = 8.0
     normalize: bool = True
@@ -186,18 +197,70 @@ def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
     if any(int(s) < 0 or int(s) >= int(config.resource.pdsch_n_symbols)
            for s in config.resource.dmrs_symbol_indices):
         raise ValueError(f"resource.dmrs_symbol_indices are outside the PDSCH grid. config={source_path}")
-    if str(config.channel.backend).lower() not in ("legacy_exponential", "sionna_tdl"):
-        raise ValueError(f"channel.backend must be legacy_exponential or sionna_tdl. config={source_path}")
+    backend = str(config.channel.backend).lower()
+    if backend not in ("legacy_exponential", "sionna_tdl", "sionna_cdl"):
+        raise ValueError(
+            "channel.backend must be legacy_exponential, sionna_tdl, or sionna_cdl. "
+            f"config={source_path}"
+        )
     if str(config.channel.tdl_profile).upper() not in ("A", "B", "C", "D", "E", "A30", "B100", "C300"):
         raise ValueError(f"channel.tdl_profile is invalid. config={source_path}")
+    if str(config.channel.cdl_profile).upper() not in ("A", "B", "C", "D", "E"):
+        raise ValueError(f"channel.cdl_profile must be A, B, C, D, or E. config={source_path}")
     if float(config.channel.delay_spread_ns) <= 0:
         raise ValueError(f"channel.delay_spread_ns must be positive. config={source_path}")
     if float(config.channel.carrier_frequency_hz) <= 0:
         raise ValueError(f"channel.carrier_frequency_hz must be positive. config={source_path}")
-    if float(config.channel.ue_speed_kmh) not in (0.0, 3.0, 60.0):
-        raise ValueError(f"channel.ue_speed_kmh must be 0, 3, or 60. config={source_path}")
+    if float(config.channel.ue_speed_kmh) < 0:
+        raise ValueError(f"channel.ue_speed_kmh must be non-negative. config={source_path}")
     if int(config.channel.num_sinusoids) <= 0:
         raise ValueError(f"channel.num_sinusoids must be positive. config={source_path}")
+    if str(config.channel.cdl_direction).lower() not in ("downlink", "uplink"):
+        raise ValueError(f"channel.cdl_direction must be downlink or uplink. config={source_path}")
+    if str(config.channel.cdl_polarization).lower() != "single":
+        raise ValueError(
+            "The platform currently supports channel.cdl_polarization=single only. "
+            f"config={source_path}"
+        )
+    if str(config.channel.cdl_polarization_type).upper() not in ("V", "H"):
+        raise ValueError(
+            "Single-polarized CDL arrays require cdl_polarization_type V or H. "
+            f"config={source_path}"
+        )
+    if str(config.channel.cdl_antenna_pattern).lower() not in ("omni", "38.901"):
+        raise ValueError(
+            "channel.cdl_antenna_pattern must be omni or 38.901. "
+            f"config={source_path}"
+        )
+    for name in (
+        "cdl_tx_array_rows",
+        "cdl_tx_array_cols",
+        "cdl_rx_array_rows",
+        "cdl_rx_array_cols",
+    ):
+        if int(getattr(config.channel, name)) < 0:
+            raise ValueError(f"channel.{name} must be non-negative. config={source_path}")
+    for name in (
+        "cdl_element_vertical_spacing",
+        "cdl_element_horizontal_spacing",
+    ):
+        if float(getattr(config.channel, name)) <= 0:
+            raise ValueError(f"channel.{name} must be positive. config={source_path}")
+    if backend == "sionna_cdl":
+        tx_rows = int(config.channel.cdl_tx_array_rows)
+        tx_cols = int(config.channel.cdl_tx_array_cols) or int(config.antenna.n_tx)
+        rx_rows = int(config.channel.cdl_rx_array_rows)
+        rx_cols = int(config.channel.cdl_rx_array_cols) or int(config.antenna.n_rx)
+        if tx_rows * tx_cols != int(config.antenna.n_tx):
+            raise ValueError(
+                "CDL Tx array rows*cols must equal antenna.n_tx; zero cols selects an automatic ULA. "
+                f"config={source_path}"
+            )
+        if rx_rows * rx_cols != int(config.antenna.n_rx):
+            raise ValueError(
+                "CDL Rx array rows*cols must equal antenna.n_rx; zero cols selects an automatic ULA. "
+                f"config={source_path}"
+            )
     if int(config.simulation.n_trials_per_snr) <= 0:
         raise ValueError(f"simulation.n_trials_per_snr must be positive. config={source_path}")
     if len(config.simulation.snr_range_db) != 3:

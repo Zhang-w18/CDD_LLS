@@ -1,0 +1,39 @@
+schema: plan034-rsrp-cdf-v1
+output_dir: outputs/experiment034_rsrp_pdcch_4t4r/20260916_plan034
+seed: 20260916
+random_stream_namespace: plan034_rsrp_cdf_v1
+antenna:
+  n_tx: 4
+  n_rx: 4
+resource:
+  n_rb: 48
+  duration_symbols: 2
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 1
+  first_cce: 0
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: C
+  delay_spread_ns: 300.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 3.0
+  num_sinusoids: 20
+  normalize: true
+precoding:
+  fixed_candidate_id: FIXED_DFT0
+  frequency_candidate_id: FREQ_SIDON_0137
+  delay_grid_coordinates: [0, 1, 3, 7]
+  phase_denominator: 36
+  total_transmit_power: 1.0
+simulation:
+  trials: 100000
+  batch_size: 500
+  smoke_trials: 100
+  resume: true

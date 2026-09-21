@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Dict, List, Sequence
 import numpy as np
 
@@ -98,6 +99,114 @@ def qpsk_codebook(n_tx: int) -> np.ndarray:
     raise ValueError(f"Unsupported PRG codebook n_tx={n_tx}.")
 
 
+def spatial_dft_codebook(n_tx: int, normalize: bool = False) -> np.ndarray:
+    """Return an ``[n_tx, n_tx]`` spatial DFT codebook with vectors in columns."""
+    n_tx = int(n_tx)
+    if n_tx <= 0:
+        raise ValueError("n_tx must be positive.")
+    antenna = np.arange(n_tx, dtype=np.float64)[:, None]
+    vector = np.arange(n_tx, dtype=np.float64)[None, :]
+    codebook = np.exp(-1j * 2.0 * np.pi * antenna * vector / float(n_tx))
+    if bool(normalize):
+        codebook = codebook / np.sqrt(float(n_tx))
+    return codebook.astype(np.complex128)
+
+
+def build_prg_dft_precoder(
+    grid: ResourceGrid,
+    n_tx: int,
+    prg_size_rb: int,
+    prg_vector_indices: Sequence[int],
+    normalize: bool = False,
+) -> PrecoderResult:
+    """Build a PRG-constant spatial DFT precoder on the active-band RB grid."""
+    n_tx = int(n_tx)
+    prg_size_rb = int(prg_size_rb)
+    if prg_size_rb <= 0:
+        raise ValueError("prg_size_rb must be positive.")
+    if int(grid.n_sc) % (12 * prg_size_rb):
+        raise ValueError("The active bandwidth must contain an integer number of PRGs.")
+    n_prgs = int(grid.n_sc) // (12 * prg_size_rb)
+    order = [int(value) for value in prg_vector_indices]
+    if len(order) != n_prgs:
+        raise ValueError(f"Expected {n_prgs} PRG vector indices, received {len(order)}.")
+    if any(value < 0 or value >= n_tx for value in order):
+        raise ValueError("PRG vector indices must be in [0,n_tx).")
+    codebook = spatial_dft_codebook(n_tx, normalize=normalize)
+    prg_by_subcarrier = np.arange(int(grid.n_sc), dtype=np.int64) // (12 * prg_size_rb)
+    C = codebook[:, np.asarray(order, dtype=np.int64)[prg_by_subcarrier]].T
+    return PrecoderResult(
+        C=C.astype(np.complex128),
+        label="PRG_SPATIAL_DFT",
+        metadata={
+            "prg_size_rb": prg_size_rb,
+            "prg_count": n_prgs,
+            "prg_vector_indices": order,
+            "spatial_dft_size": n_tx,
+            "normalized": bool(normalize),
+            "vector_power": 1.0 if bool(normalize) else float(n_tx),
+            "phase_sign": "negative",
+            "prg_reference": "first_active_rb",
+        },
+    )
+
+
+def build_prg_dft_precoder_batch(
+    grid: ResourceGrid,
+    n_tx: int,
+    prg_size_rb: int,
+    prg_vector_indices: np.ndarray,
+    normalize: bool = False,
+) -> np.ndarray:
+    """Build per-trial PRG DFT matrices with shape ``[batch,n_sc,n_tx]``."""
+    orders = np.asarray(prg_vector_indices, dtype=np.int64)
+    if orders.ndim != 2:
+        raise ValueError("prg_vector_indices must have shape [batch,n_prg].")
+    expected = int(grid.n_sc) // (12 * int(prg_size_rb))
+    if int(grid.n_sc) % (12 * int(prg_size_rb)) or orders.shape[1] != expected:
+        raise ValueError("PRG order width does not match the active bandwidth.")
+    if np.any(orders < 0) or np.any(orders >= int(n_tx)):
+        raise ValueError("PRG vector indices must be in [0,n_tx).")
+    codebook = spatial_dft_codebook(int(n_tx), normalize=normalize)
+    prg_by_subcarrier = np.arange(int(grid.n_sc), dtype=np.int64) // (12 * int(prg_size_rb))
+    selected = orders[:, prg_by_subcarrier]
+    return np.transpose(codebook[:, selected], (1, 2, 0)).astype(np.complex128)
+
+
+def build_aged_mrt_prg_precoder(
+    old_channel: np.ndarray,
+    prg_size_rb: int = 6,
+    normalize: bool = False,
+) -> np.ndarray:
+    """Build unquantized PRG MRT from stale multi-Rx CSI.
+
+    ``old_channel`` has shape ``[batch,n_rx,n_tx,n_sc]``.  For every PRG and
+    trial, the dominant eigenvector is taken from the Gram matrix summed over
+    all receive branches and all subcarriers in that PRG.  Returned vectors
+    have squared norm one when ``normalize`` is true, otherwise ``n_tx``, and
+    are constant within each PRG.
+    """
+    old = np.asarray(old_channel, dtype=np.complex128)
+    if old.ndim != 4:
+        raise ValueError("old_channel must have shape [batch,n_rx,n_tx,n_sc].")
+    batch, n_rx, n_tx, n_sc = old.shape
+    if batch <= 0 or n_rx <= 0 or n_tx <= 0:
+        raise ValueError("old_channel dimensions must be positive.")
+    prg_size = 12 * int(prg_size_rb)
+    if prg_size <= 0 or n_sc % prg_size:
+        raise ValueError("PRG size must be positive and divide the active bandwidth.")
+    weights = np.empty((batch, n_sc, n_tx), dtype=np.complex128)
+    for start in range(0, n_sc, prg_size):
+        stop = start + prg_size
+        h = old[:, :, :, start:stop]
+        gram = np.einsum("brik,brjk->bij", h.conj(), h, optimize=True)
+        _, eigenvectors = np.linalg.eigh(gram)
+        scale = 1.0 if bool(normalize) else math.sqrt(float(n_tx))
+        vector = scale * eigenvectors[:, :, -1]
+        weights[:, start:stop, :] = vector[:, None, :]
+    return weights
+
+
 def build_precoder(
     grid: ResourceGrid,
     resource: ResourceConfig,
@@ -171,6 +280,10 @@ def equivalent_channel(H: np.ndarray, C: np.ndarray) -> np.ndarray:
             raise ValueError("C must have shape [n_sc,n_tx].")
         return np.einsum("rmsk,km->rsk", H_arr, C_arr, optimize=True)
     if H_arr.ndim == 5:
+        if C_arr.ndim == 3:
+            if C_arr.shape != (H_arr.shape[0], H_arr.shape[4], H_arr.shape[2]):
+                raise ValueError("Batched C must have shape [batch,n_sc,n_tx].")
+            return np.einsum("brmsk,bkm->brsk", H_arr, C_arr, optimize=True)
         if C_arr.shape != (H_arr.shape[4], H_arr.shape[2]):
             raise ValueError("C must have shape [n_sc,n_tx].")
         return np.einsum("brmsk,km->brsk", H_arr, C_arr, optimize=True)

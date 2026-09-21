@@ -1,0 +1,227 @@
+schema: pdcch-cdd-bler-v2
+output_dir: outputs/experiment031_pdcch_cdd/20260908_strict_sidon_search/coarse_confirmation/a100_al2
+seed: 20260908
+batch_size: 100
+antenna:
+  n_tx: 8
+  n_rx: 1
+resource:
+  n_rb: 48
+  duration_symbols: 1
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 2
+  first_cce: 0
+pdcch:
+  payload_bits: 41
+  coded_bits: 216
+  crc_rnti: 65535
+  scrambling_id: 208
+  data_scrambling_rnti: 0
+  polar_list_size: 8
+  polar_decoder_type: hybSCL
+  polar_cpu_only: true
+  coreset_start_symbol: 0
+  slot_number: 0
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: A
+  delay_spread_ns: 100.0
+  carrier_frequency_hz: 3.5e9
+  ue_speed_kmh: 0.0
+  num_sinusoids: 20
+  normalize: true
+receiver:
+  channel_estimation: frequency_lmmse
+  llr_clip: 50.0
+simulation:
+  snr_points_db:
+  - 0.0
+  min_trials_per_snr: 3000
+  target_errors: 1000000
+  max_trials_per_snr: 3000
+  target_bler: 0.01
+  save_trial_error_flags: true
+  resume: true
+  progress_every_batches: 1
+candidates:
+- candidate_id: A100_SIDON8_AL2_01
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL2 01 (S0)
+  delay_grid_coordinates:
+  - 0
+  - 1
+  - 3
+  - 7
+  - 12
+  - 20
+  - 30
+  - 65
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - 3.0
+  - 3.5
+  - 4.0
+  - 4.5
+  - 5.0
+- candidate_id: A100_SIDON8_AL2_02
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL2 02
+  delay_grid_coordinates:
+  - 0
+  - 3
+  - 7
+  - 25
+  - 46
+  - 57
+  - 124
+  - 139
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - 3.0
+  - 3.5
+  - 4.0
+  - 4.5
+  - 5.0
+- candidate_id: A100_SIDON8_AL2_03
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL2 03
+  delay_grid_coordinates:
+  - 0
+  - 2
+  - 6
+  - 14
+  - 25
+  - 32
+  - 47
+  - 141
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - 2.0
+  - 2.5
+  - 3.0
+  - 5.0
+  - 5.5
+  - 6.0
+- candidate_id: A100_SIDON8_AL2_04
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL2 04
+  delay_grid_coordinates:
+  - 0
+  - 7
+  - 30
+  - 49
+  - 71
+  - 92
+  - 116
+  - 136
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - 3.0
+  - 3.5
+  - 4.0
+  - 5.0
+  - 5.5
+  - 6.0
+- candidate_id: A100_SIDON8_AL2_05
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL2 05
+  delay_grid_coordinates:
+  - 0
+  - 3
+  - 73
+  - 84
+  - 101
+  - 113
+  - 121
+  - 128
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - 3.0
+  - 3.5
+  - 4.0
+  - 6.0
+  - 6.5
+  - 7.0
+- candidate_id: A100_SIDON8_AL2_06
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL2 06
+  delay_grid_coordinates:
+  - 0
+  - 1
+  - 29
+  - 74
+  - 90
+  - 123
+  - 127
+  - 132
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - 3.0
+  - 3.5
+  - 4.0
+  - 6.0
+  - 6.5
+  - 7.0
+- candidate_id: A100_SIDON8_AL2_07
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL2 07
+  delay_grid_coordinates:
+  - 0
+  - 2
+  - 49
+  - 58
+  - 84
+  - 92
+  - 124
+  - 129
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - 4.0
+  - 4.5
+  - 5.0
+  - 7.0
+  - 7.5
+  - 8.0
+- candidate_id: A100_SIDON8_AL2_08
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL2 08
+  delay_grid_coordinates:
+  - 0
+  - 4
+  - 11
+  - 31
+  - 44
+  - 54
+  - 68
+  - 129
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - 3.0
+  - 3.5
+  - 4.0
+  - 5.0
+  - 5.5
+  - 6.0

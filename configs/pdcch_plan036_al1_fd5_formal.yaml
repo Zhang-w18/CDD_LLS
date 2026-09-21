@@ -1,0 +1,16 @@
+schema: plan036-pdcch-paired-v1
+output_dir: outputs/experiment036_pdcch_4t4r_1symbol/20260918_formal/al1_fd5
+seed: 20260918
+random_stream_namespace: plan036_pdcch_4t4r_1symbol_v1
+aggregation_level: 1
+n_rx: 4
+requested_doppler_hz: 5.0
+carrier_frequency_hz: 4000000000.0
+light_speed_mps: 299792458.0
+ue_speed_kmh: 1.349066061
+snr_points_db: [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+minimum_trials: 2000
+check_interval_trials: 1000
+maximum_trials: 50000
+target_errors: 200
+batch_size: 1000

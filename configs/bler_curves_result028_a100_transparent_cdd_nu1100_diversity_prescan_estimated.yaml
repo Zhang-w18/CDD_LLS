@@ -1,0 +1,32 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/transparent_cdd_nu1100_diversity_prescan_estimated
+seed: 20260727
+batch_size: 20
+max_passes: 1
+
+scenes:
+  - scenario_id: A100
+    mode: transparent_cdd_physical_covariance
+    plan_section: 13
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_cdd_baselines:
+      - candidate_id: A100_SMALL_CDD_NU1100_TRANSPARENT_CDD
+        delay_grid_coordinates: [-0.75, -0.29809293777231693, -0.05505748890107687, 0.9387998633766634, 1.873540817584035, 3.0169058861647016, 4.1646556275916815, 4.391081388131776]
+        family: TRANSPARENT_CDD_NONUNIFORM_SEARCH
+        label: nonuniform small-delay transparent CDD
+    paired_policy:
+      target_errors: 1
+      min_total_trials: 300
+      max_total_trials: 300
+      max_interval_trials: 300
+    max_snr_tasks_per_run: 21
+    receivers:
+      estimated:
+        snr_db: [14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5, 20, 20.5, 21, 21.5, 22, 22.5, 23, 23.5, 24]
+        target_errors: 1
+        min_total_trials: 300
+        max_total_trials: 300
+        stop_below_bler: null

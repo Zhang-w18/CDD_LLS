@@ -1,0 +1,142 @@
+schema: pdcch-cdd-bler-v2
+output_dir: outputs/experiment031_pdcch_cdd/20260908_strict_sidon_search/fine/a100_al8
+seed: 20260908
+batch_size: 100
+antenna:
+  n_tx: 8
+  n_rx: 1
+resource:
+  n_rb: 48
+  duration_symbols: 1
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 8
+  first_cce: 0
+pdcch:
+  payload_bits: 41
+  coded_bits: 864
+  crc_rnti: 65535
+  scrambling_id: 208
+  data_scrambling_rnti: 0
+  polar_list_size: 8
+  polar_decoder_type: hybSCL
+  polar_cpu_only: true
+  coreset_start_symbol: 0
+  slot_number: 0
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: A
+  delay_spread_ns: 100.0
+  carrier_frequency_hz: 3.5e9
+  ue_speed_kmh: 0.0
+  num_sinusoids: 20
+  normalize: true
+receiver:
+  channel_estimation: frequency_lmmse
+  llr_clip: 50.0
+simulation:
+  snr_points_db:
+  - 0.0
+  min_trials_per_snr: 10000
+  target_errors: 200
+  max_trials_per_snr: 50000
+  target_bler: 0.01
+  save_trial_error_flags: true
+  resume: true
+  progress_every_batches: 10
+candidates:
+- candidate_id: A100_SIDON8_AL8_01
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL8 01 (S0)
+  delay_grid_coordinates:
+  - 0
+  - 1
+  - 3
+  - 7
+  - 12
+  - 20
+  - 30
+  - 65
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - -5.0
+  - -4.75
+  - -4.5
+  - -3.0
+  - -2.75
+  - -2.5
+- candidate_id: A100_SIDON8_AL8_02
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL8 02
+  delay_grid_coordinates:
+  - 0
+  - 5
+  - 124
+  - 136
+  - 163
+  - 403
+  - 487
+  - 505
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - -4.5
+  - -4.25
+  - -4.0
+  - -3.0
+  - -2.75
+  - -2.5
+- candidate_id: A100_SIDON8_AL8_05
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL8 05
+  delay_grid_coordinates:
+  - 0
+  - 3
+  - 15
+  - 23
+  - 70
+  - 104
+  - 139
+  - 569
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - -4.5
+  - -4.25
+  - -4.0
+  - -3.0
+  - -2.75
+  - -2.5
+- candidate_id: A100_SIDON8_AL8_06
+  family: STRICT_SIDON
+  scheme: cdd
+  strict_sidon: true
+  label: A100 Sidon8 AL8 06
+  delay_grid_coordinates:
+  - 0
+  - 1
+  - 5
+  - 160
+  - 178
+  - 241
+  - 524
+  - 568
+  receiver_covariance_mode: matched_effective
+  snr_points_db:
+  - -4.5
+  - -4.25
+  - -4.0
+  - -3.0
+  - -2.75
+  - -2.5
+random_stream_namespace: plan031_strict_sidon_final_fine_v1

@@ -1,0 +1,52 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/transparent_cdd_physical_covariance
+seed: 20260727
+batch_size: 20
+max_passes: 1
+
+scenes:
+  - scenario_id: A100
+    mode: transparent_cdd_physical_covariance
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_cdd_baselines:
+      - candidate_id: A100_B0_QC_TRANSPARENT_CDD
+        source_candidate_id: A100_B0_QC
+        family: TRANSPARENT_CDD_PHYSCOV
+        label: delay set 1, transparent CDD
+        style: {color: "#111111", linestyle: "--", marker: "x"}
+      - candidate_id: A100_AP_RMS_T1_TRANSPARENT_CDD
+        source_candidate_id: A100_AP_RMS_T1
+        family: TRANSPARENT_CDD_PHYSCOV
+        label: delay set 2, transparent CDD
+        style: {color: "#7f7f7f", linestyle: "--", marker: "x"}
+      - candidate_id: A100_AP_TU_NT_TRANSPARENT_CDD
+        source_candidate_id: A100_AP_TU_NT
+        family: TRANSPARENT_CDD_PHYSCOV
+        label: delay set 3, transparent CDD
+        style: {color: "#d62728", linestyle: "--", marker: "x"}
+      - candidate_id: A100_S0_SIDON_TRANSPARENT_CDD
+        source_candidate_id: A100_S0_SIDON
+        family: TRANSPARENT_CDD_PHYSCOV
+        label: delay set 4, transparent CDD
+        style: {color: "#9467bd", linestyle: "--", marker: "x"}
+      - candidate_id: A100_MEFF_T2_06_TRANSPARENT_CDD
+        source_candidate_id: A100_MEFF_T2_06
+        family: TRANSPARENT_CDD_PHYSCOV
+        label: delay set 5, transparent CDD
+        style: {color: "#1f77b4", linestyle: "--", marker: "x"}
+    paired_policy:
+      target_errors: 200
+      min_total_trials: 10000
+      max_total_trials: 50000
+      max_interval_trials: 1000
+    max_snr_tasks_per_run: 8
+    receivers:
+      estimated:
+        snr_db: [14, 14.25, 14.5, 14.75, 15, 15.5, 15.75, 16]
+        target_errors: 200
+        min_total_trials: 10000
+        max_total_trials: 50000
+        stop_below_bler: null

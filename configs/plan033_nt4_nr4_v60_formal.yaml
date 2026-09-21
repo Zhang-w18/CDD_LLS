@@ -1,0 +1,13 @@
+schema: plan033-tdl-mobility-mimo-v1
+run_kind: formal
+output_dir: outputs/experiment033_tdl_mobility_mimo/20260915_main/formal/A100_NT4_NR4_V60
+seed: 20260727
+batch_size: 25
+target_total_trials: 10000
+n_tx: 4
+n_rx: 4
+speed_kmh: 60
+feedback_period_slots: 10
+history_symbol_index: 140
+precoder_normalize: true
+snr_db: [4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6, 6.25, 6.5, 6.75, 7, 7.25, 7.5, 7.75, 8]

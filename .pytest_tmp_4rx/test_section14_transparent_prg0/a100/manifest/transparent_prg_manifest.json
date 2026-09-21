@@ -1,0 +1,57 @@
+{
+  "schema": "plan028-transparent-prg-manifest-v1",
+  "status": "researcher_confirmed_plan028_section14",
+  "plan": "research/plan-028.md#14-a100-8tx4rx-首批-idealestimated-csi-bler-增补",
+  "scenario_id": "A100",
+  "source_manifest_sha256": "source-sha256",
+  "system": {
+    "n_prbs": 48,
+    "active_subcarriers": 576,
+    "subcarrier_spacing_hz": 30000.0,
+    "n_tx": 8,
+    "n_rx": 4,
+    "layers": 1,
+    "tdl_profile": "A",
+    "delay_spread_ns": 100.0,
+    "ue_speed_kmh": 0.0,
+    "dmrs_spacing_subcarriers": 6,
+    "dmrs_symbol_indices": [
+      2,
+      7
+    ],
+    "data_re": 5568,
+    "mcs_table": "nr_256qam",
+    "mcs_index": 8
+  },
+  "precoder": {
+    "codebook": "8x8 spatial DFT",
+    "coefficient_magnitude": 1.0,
+    "vector_power": 8.0,
+    "phase_sign": "negative",
+    "prg_reference": "first_active_rb"
+  },
+  "randomization": {
+    "generator": "numpy.random.Generator(PCG64)",
+    "base_seed": 20260727,
+    "seed_fields": [
+      "base_seed",
+      "candidate_id",
+      "snr_db",
+      "absolute_trial_index",
+      "tail_prg_order"
+    ]
+  },
+  "candidates": [
+    {
+      "candidate_id": "A100_PRG_DFT8_6RB",
+      "family": "TRANSPARENT_PRG_DFT",
+      "prg_size_rb": 6,
+      "mapping": "cycle_all"
+    }
+  ],
+  "paired_policy": {
+    "target_errors": 1,
+    "min_total_trials": 300,
+    "max_total_trials": 300
+  }
+}

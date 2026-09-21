@@ -1,0 +1,64 @@
+schema: pdcch-cdd-bler-v2
+output_dir: outputs/experiment031_pdcch_cdd/20260914_c300_al1_cdd911/formal/ideal/1rx
+seed: 20260914
+batch_size: 100
+antenna:
+  n_tx: 4
+  n_rx: 1
+resource:
+  n_rb: 48
+  duration_symbols: 2
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 1
+  first_cce: 0
+pdcch:
+  payload_bits: 41
+  coded_bits: 108
+  crc_rnti: 65535
+  scrambling_id: 208
+  data_scrambling_rnti: 0
+  polar_list_size: 8
+  polar_decoder_type: hybSCL
+  polar_cpu_only: true
+  coreset_start_symbol: 0
+  slot_number: 0
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: C
+  delay_spread_ns: 300.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 3.0
+  num_sinusoids: 20
+  normalize: true
+receiver:
+  channel_estimation: ideal
+  llr_clip: 50.0
+simulation:
+  snr_points_db: [5.75, 6.0, 6.25, 6.5, 6.75, 7.0, 7.25, 7.5, 7.75, 8.0, 8.25, 8.5, 8.75, 9.0, 9.25, 9.5, 9.75, 10.0, 10.25, 10.5, 10.75, 12.5, 12.75, 13.0, 13.25, 14.5, 14.75, 15.0, 15.25, 15.5, 15.75, 16.0, 16.25]
+  min_trials_per_snr: 10000
+  target_errors: 200
+  max_trials_per_snr: 50000
+  target_bler: 0.01
+  save_trial_error_flags: true
+  resume: true
+  progress_every_batches: 50
+candidates:
+- candidate_id: CDD911
+  family: CDD911
+  scheme: cdd
+  receiver_covariance_mode: matched_effective
+  allow_duplicate_delays: true
+  label: CDD911
+  delay_grid_coordinates: [0.0, 0.0, 0.98388, 0.98388]
+  style:
+    color: '#d62728'
+    linestyle: '-'
+    marker: o
+random_stream_namespace: cdd911-1rx-ideal-formal-v1

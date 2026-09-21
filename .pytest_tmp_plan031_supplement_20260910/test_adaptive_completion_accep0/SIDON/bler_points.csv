@@ -1,0 +1,3 @@
+candidate_id,snr_db,trials,errors
+SIDON,1.0,10000,200
+SIDON,2.0,50000,100

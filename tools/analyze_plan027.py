@@ -488,7 +488,7 @@ def render_result(
     lines = [
         title,
         "",
-        "> 对应 `research/plan-027.md`。E1–E3 和 E4 候选门控已完成；E4 estimated-CSI BLER 因缺少第二次 manifest 确认而按计划停止。",
+        "> 对应 `research/plan-027-有效矩-Sidon-DMRS.md`。E1–E3 和 E4 候选门控已完成；E4 estimated-CSI BLER 因缺少第二次 manifest 确认而按计划停止。",
         "",
         "## 1. 结论与状态",
         "",
@@ -1003,7 +1003,7 @@ def run(output: Path) -> None:
     save_json(
         {
             "run_id": output.name,
-            "plan": "research/plan-027.md",
+            "plan": "research/plan-027-有效矩-Sidon-DMRS.md",
             "K_active_subcarriers": 576,
             "subcarrier_spacing_hz": 30000.0,
             "n_tx": 8,
@@ -1038,7 +1038,7 @@ def run(output: Path) -> None:
         ),
         encoding="utf-8",
     )
-    (ROOT / "research" / "result-027.md").write_text(
+    (ROOT / "research" / "result-027-有效矩-Sidon-DMRS.md").write_text(
         render_result(
             output,
             support,
@@ -1054,7 +1054,7 @@ def run(output: Path) -> None:
         ),
         encoding="utf-8",
     )
-    (ROOT / "research" / "result-027-text.md").write_text(
+    (ROOT / "research" / "result-027-有效矩-Sidon-DMRS-text.md").write_text(
         render_result(
             output,
             support,

@@ -84,7 +84,7 @@ $$
 $$
 P_{\rm out}(\mathrm{snr},R)
 =
-\Pr[I(\mathbf h)<R].
+\Pr[I(\mathbf h) < R].
 $$
 
 分集侧的最终判据是指定 outage 概率所需 SNR，通常至少包含 10% 和 1% 两个尾部。Gram、log-det、相关矩和条件数只能作为筛选或机理诊断，不能替代 outage 或链路 BLER。
@@ -372,10 +372,10 @@ $$
 =
 R_{{\rm phy},kl}
 \frac{(\mathbf V\mathbf V^H)_{kl}}{N_t},
-\qquad
-C(r;\mathrm{snr})
-=
-\sum_{q\ge1}a_q^2(\mathrm{snr})r^{2q},
+$$
+
+$$
+\mathrm{Cov}\big(I_{\rm QAM}(\mathrm{snr}|g_k|^2),\,I_{\rm QAM}(\mathrm{snr}|g_l|^2)\big)=C(|\rho_{kl}|;\mathrm{snr}),\qquad C(r;\mathrm{snr})=\sum_{q\ge1}a_q(\mathrm{snr})^2\,r^{2q},
 $$
 
 并定义偶数阶有效相关矩
@@ -490,6 +490,92 @@ $$
 5. 接收机使用的协方差是否与实际 $\mathbf V$ 和 PDP 匹配。
 
 分集相关目标和 CE NMSE 是不同的矩阵泛函，但由同一个 $\mathbf V$ 和 $\mathbf R_{\rm phy}$ 决定，因此应作为两个独立目标做 Pareto 设计。
+
+### 3.9 多 Rx 接收模型
+
+本节只规定单层链路从单 Rx 到 $N_r\ge 1$ 的扩展。新增仿真入口使用单位总发射功率。若 $\mathbf V$ 表示各元素模长为 1 的相位矩阵，则实际发射预编码矩阵为
+
+$$
+\mathbf W
+:=
+\frac{\mathbf V}{\sqrt{N_t}},
+\qquad
+\sum_{n=0}^{N_t-1}|W_{k,n}|^2=1.
+$$
+
+默认假设不同 Rx 分支之间不相关、不同 Tx 分支之间不相关、各 Tx--Rx 分支具有相同的归一化物理频率协方差：
+
+$$
+\mathbb E\!\left[
+h_{r,k,n}h_{r',l,n'}^*
+\right]
+=
+\delta_{r,r'}\delta_{n,n'}R_{{\rm phy},kl}.
+$$
+
+其中 $\delta_{a,b}$ 是 Kronecker delta。
+
+第 $r$ 根接收天线上的等效信道和观测为
+
+$$
+g_{r,k}
+=
+\sum_{n=0}^{N_t-1}W_{k,n}h_{r,k,n},
+\qquad
+y_{r,k}=g_{r,k}x_k+n_{r,k},
+$$
+
+其中 $n_{r,k}\sim\mathcal{CN}(0,\sigma_n^2)$，并在 Rx 维独立。与单 Rx 模型相比，每根 Rx 分支的 $\mathbf R_g$、导频可辨识条件和频域或时频 LMMSE 滤波器均不改变；接收机把同一个滤波器独立应用于各分支的导频观测，不做跨 Rx 联合估计。添加 Rx 天线不增加 DMRS 开销，也不改变单个 DMRS 观测的噪声方差。
+
+SNR 继续定义为单位总发射功率下每根 Rx 分支的平均接收 SNR：
+
+$$
+\mathrm{SNR}
+:=
+\frac{1}{\sigma_n^2},
+\qquad
+\sigma_n^2=10^{-\mathrm{SNR}_{\rm dB}/10}.
+$$
+
+因此 $\sigma_n^2$ 不随 $N_r$ 缩放。estimated-CSI 最大比合并（maximal-ratio combining, MRC）为
+
+$$
+\widehat x_k
+=
+\frac{
+\sum_{r=0}^{N_r-1}\widehat g_{r,k}^*y_{r,k}
+}{
+\sum_{r=0}^{N_r-1}|\widehat g_{r,k}|^2
+},
+\qquad
+\widehat\sigma_{\rm eff,k}^2
+=
+\frac{\sigma_n^2}{
+\sum_{r=0}^{N_r-1}|\widehat g_{r,k}|^2
+}.
+$$
+
+ideal CSI 时以 $g_{r,k}$ 代替 $\widehat g_{r,k}$。在默认独立同分布 Rx 假设下，ideal-CSI 条件合并 SNR 为
+
+$$
+\gamma_k^{\rm MRC}
+=
+\frac{\sum_{r=0}^{N_r-1}|g_{r,k}|^2}{\sigma_n^2},
+$$
+
+所以平均合并功率相对单 Rx 增加 $N_r$ 倍，同时获得接收分集；该结论不适用于相关 Rx。信道估计 NMSE 按每个 trial 的全部 Rx 分支和全部 data RE 聚合：
+
+$$
+r_t
+=
+\frac{
+\sum_r\sum_{k\in D}|\widehat g_{r,k}-g_{r,k}|^2
+}{
+\sum_r\sum_{k\in D}|g_{r,k}|^2
+}.
+$$
+
+默认模型暂不包含接收天线空间相关、跨 Rx 联合信道估计或多层空间检测；这些扩展必须另行定义信道协方差、估计器和解调器。
 
 ## 4. 研究地图
 
@@ -876,7 +962,8 @@ weighted almost-Sidon 不是独立于 $J_{\rm CDD}$ 的最终性能目标，而�
 
 | 符号 | 含义 |
 |---|---|
-| $N_t$ / $K$ | 发射分支数 / 有效子载波数 |
+| $N_t$ / $N_r$ / $K$ | 发射分支数 / 接收分支数 / 有效子载波数 |
+| $\mathbf W$ | 新仿真入口实际使用的单位总功率发射预编码矩阵，$\mathbf W=\mathbf V/\sqrt{N_t}$ |
 | $\Delta f$ | 子载波间隔 |
 | $\mathbf V$ | 恒模频域相位矩阵 |
 | $\phi_{k,n}$ | 第 $k$ 个子载波、第 $n$ 个分支的相位 |
@@ -903,9 +990,11 @@ weighted almost-Sidon 不是独立于 $J_{\rm CDD}$ 的最终性能目标，而�
 | $\delta_p$ | 物理 PDP 第 $p$ 个抽头时延 |
 | $\tau_{n,p}$ | 第 $n$ 个人工时延与第 $p$ 个物理抽头的复合路径时延 |
 | $\tau_{\rm alias}$ | 导频无混叠时延周期 |
+| $T_{\rm RMS}$ | 物理信道 RMS delay spread；作为 RMS 展宽感知等差方案的直接时延公差 |
 | $\epsilon$ / $T_\epsilon$ | 允许忽略的 PDP 能量比例 / 覆盖 $1-\epsilon$ 能量的有效时延支撑 |
 | $s_{ac}$ | 两个人工时延的二元和 $\tau_a+\tau_c$ |
 | $T_{\rm margin}$ / $T_{\rm sync}$ | 二元和保护余量 / 定时误差余量 |
+| $g_\Sigma$ / $g_{\rm fold}$ | 厚 Sidon 在 DFT delay index / DMRS 折叠 index 上要求的最小整数保护距离 |
 | $J_{\rm div}$ / $J_{\rm corr}$ / $J_{\rm CDD}$ | 分集目标 / 一般 $\mathbf V$ 互信息相关代理 / CDD 特化相关代理 |
 | $L_{\rm CE}$ / $L_{\rm CE,max}$ | 实际协方差下的信道估计 NMSE / 允许的 NMSE 上限 |
 | $\mathcal V$ | 满足功率、DMRS 和实现约束的候选设计集合 |

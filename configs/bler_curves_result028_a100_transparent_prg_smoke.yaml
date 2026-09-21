@@ -1,0 +1,43 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/transparent_prg_baselines_smoke2
+seed: 20260727
+batch_size: 20
+max_passes: 2
+
+scenes:
+  - scenario_id: A100
+    mode: transparent_prg_dft
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_prg_baselines:
+      - candidate_id: A100_PRG_DFT8_4RB
+        family: TRANSPARENT_PRG_DFT
+        label: transparent PRG 4 RB
+        prg_size_rb: 4
+        mapping: cycle8_random_tail4
+        style: {color: "#e7298a", linestyle: "--", marker: "v"}
+      - candidate_id: A100_PRG_DFT8_6RB
+        family: TRANSPARENT_PRG_DFT
+        label: transparent PRG 6 RB
+        prg_size_rb: 6
+        mapping: cycle_all
+        style: {color: "#66a61e", linestyle: "-.", marker: ">"}
+    paired_policy:
+      target_errors: 1
+      min_total_trials: 20
+      max_total_trials: 20
+    receivers:
+      estimated:
+        snr_db: [14, 14.25, 14.5, 14.75, 15, 15.5, 15.75, 16]
+        target_errors: 1
+        min_total_trials: 20
+        max_total_trials: 20
+        stop_below_bler: null
+      ideal:
+        snr_db: [14, 14.25, 14.5, 14.75, 15, 15.5, 15.75, 16]
+        target_errors: 1
+        min_total_trials: 20
+        max_total_trials: 20
+        stop_below_bler: null

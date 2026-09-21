@@ -1,0 +1,30 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/small_delay_cdd_matched_shard3
+seed: 20260727
+batch_size: 20
+max_passes: 100
+scenes:
+  - scenario_id: A100
+    mode: transparent_cdd_physical_covariance
+    plan_section: 16
+    covariance_mode: matched_effective
+    run_snr_db: [20]
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_cdd_baselines:
+      - candidate_id: A100_SMALL_CDD_QSTEP0P25_MATCHED_CDD
+        delay_grid_coordinates: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75]
+        family: CDD_SMALL_DELAY_MATCHED_COVARIANCE
+        label: small-delay CDD, matched CE
+        style: {color: "#00a6d6", linestyle: "-.", marker: "D"}
+    paired_policy: {target_errors: 200, min_total_trials: 10000, max_total_trials: 50000, max_interval_trials: 1000}
+    max_snr_tasks_per_run: 1
+    receivers:
+      estimated:
+        base_csv: outputs/experiment028_csi_curves/20260803_main/small_delay_cdd_matched/a100/partition_base_1000.csv
+        target_errors: 200
+        min_total_trials: 10000
+        max_total_trials: 50000
+        stop_below_bler: null

@@ -1,0 +1,16 @@
+schema: plan035-cdl-d-pdsch-2rx-v1
+run_kind: prescan
+output_dir: outputs/experiment035_cdl_d_pdsch_2rx/20260919_main/prescan/D100_NT4_NR2_V60
+seed: 20260727
+batch_size: 25
+target_total_trials: 400
+n_tx: 4
+n_rx: 2
+speed_kmh: 60
+channel_model: cdl_d
+scenario_id: D100_NT4_NR2_V60
+receiver_modes: [estimated, ideal]
+feedback_period_slots: 10
+history_symbol_index: 140
+precoder_normalize: true
+snr_db: [4, 6, 8, 10, 12, 14, 16, 18]

@@ -1,0 +1,3 @@
+candidate_id,candidate_number,delay_grid_coordinates,delay_ns,family,pilot_condition_number,pilot_rank,represented_families,roles,scenario_id
+A300_B0_QC,candidate 01,"[0,9,18,27,36,45,54,63]","[0,9,18,27,36,45,54,63]",B0_QC,1.0,8,"[""B0_QC""]",[],A300
+A300_S0_SIDON,candidate 02,"[0,1,3,7,12,20,30,65]","[0,1,3,7,12,20,30,65]",S0_SIDON,1.0,8,"[""S0_SIDON""]",[],A300

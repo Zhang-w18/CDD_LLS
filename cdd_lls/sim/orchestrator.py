@@ -15,9 +15,10 @@ from cdd_lls.core.config import (
     save_resolved_config,
 )
 from cdd_lls.core.mcs import build_tb_layout, get_mcs
-from cdd_lls.phy.channel_tdl import generate_sionna_tdl_channel, generate_tdl_channel
+from cdd_lls.phy.channel_tdl import generate_sionna_channel, generate_tdl_channel
 from cdd_lls.phy.estimators import (
     build_time_frequency_rmmse_filter,
+    cdl_spatial_unaware_covariance,
     estimate_channel,
     tdl_known_delay_covariance,
     tdl_unknown_delay_covariance,
@@ -157,7 +158,10 @@ class CDDLinkLevelOrchestrator:
         tb,
         qm: int,
     ) -> Dict[str, object]:
-        if str(getattr(cfg.channel, "backend", "legacy_exponential")).lower() == "sionna_tdl":
+        if str(getattr(cfg.channel, "backend", "legacy_exponential")).lower() in (
+            "sionna_tdl",
+            "sionna_cdl",
+        ):
             return self._run_snr_sionna_tdl(
                 cfg=cfg,
                 grid=grid,
@@ -318,21 +322,32 @@ class CDDLinkLevelOrchestrator:
         min_errors = int(cfg.simulation.min_block_errors)
 
         method = str(cfg.channel_estimation.ce_method).upper()
-        true_covariance = tdl_known_delay_covariance(grid, cfg.channel, delays)
+        backend = str(cfg.channel.backend).lower()
+        if backend == "sionna_cdl":
+            true_covariance = cdl_spatial_unaware_covariance(grid, cfg.channel, delays)
+            unknown_covariance = cdl_spatial_unaware_covariance(grid, cfg.channel)
+        else:
+            true_covariance = tdl_known_delay_covariance(grid, cfg.channel, delays)
+            unknown_covariance = tdl_unknown_delay_covariance(grid, cfg.channel)
+        estimator = None
         if method in ("TF_RMMSE_UNKNOWN", "RMMSE_TF_UNKNOWN", "RMMSE_2D_UNKNOWN"):
-            assumed_covariance = tdl_unknown_delay_covariance(grid, cfg.channel)
+            assumed_covariance = unknown_covariance
         elif method in ("TF_RMMSE_KNOWN", "RMMSE_TF_KNOWN", "RMMSE_2D_KNOWN"):
             assumed_covariance = true_covariance
+        elif method == "IDEAL":
+            assumed_covariance = None
         else:
             raise ValueError(
-                "Sionna TDL backend requires TF_RMMSE_KNOWN or TF_RMMSE_UNKNOWN channel estimation."
+                "Sionna TDL/CDL backends require IDEAL, TF_RMMSE_KNOWN, or TF_RMMSE_UNKNOWN "
+                "channel estimation."
             )
-        estimator = build_time_frequency_rmmse_filter(
-            grid,
-            assumed_covariance,
-            noise_variance=noise_var_ls,
-            diagonal_loading=float(cfg.channel_estimation.diagonal_loading),
-        )
+        if assumed_covariance is not None:
+            estimator = build_time_frequency_rmmse_filter(
+                grid,
+                assumed_covariance,
+                noise_variance=noise_var_ls,
+                diagonal_loading=float(cfg.channel_estimation.diagonal_loading),
+            )
         precoder = build_precoder(grid, cfg.resource, cfg.transmission, n_tx=int(cfg.antenna.n_tx))
         pilot_sc_local = local_indices_for_subcarriers(grid, grid.pilot_subcarrier_indices)
         data_sc_local = local_indices_for_subcarriers(grid, grid.data_subcarrier_indices)
@@ -345,8 +360,8 @@ class CDDLinkLevelOrchestrator:
         while trials < max_trials:
             trials += 1
             rng = np.random.default_rng(self._stable_seed(seed, trials))
-            channel_seed = self._stable_seed(seed, trials, "sionna_tdl")
-            channel = generate_sionna_tdl_channel(
+            channel_seed = self._stable_seed(seed, trials, backend)
+            channel = generate_sionna_channel(
                 grid=grid,
                 channel=cfg.channel,
                 n_tx=int(cfg.antenna.n_tx),
@@ -367,8 +382,13 @@ class CDDLinkLevelOrchestrator:
             if len(symbols) != int(grid.n_data_re):
                 raise RuntimeError("QAM symbol count does not match data RE count.")
 
-            ls_obs = construct_ls_observations(true_pilot, noise_var_ls, rng)
-            g_hat_data = estimator.estimate_data(ls_obs)
+            if method == "IDEAL":
+                g_hat_data = true_data
+            else:
+                ls_obs = construct_ls_observations(true_pilot, noise_var_ls, rng)
+                if estimator is None:
+                    raise RuntimeError("RMMSE estimator was not constructed.")
+                g_hat_data = estimator.estimate_data(ls_obs)
             ce_nmse = float(
                 np.sum(np.abs(g_hat_data - true_data) ** 2)
                 / max(float(np.sum(np.abs(true_data) ** 2)), 1e-30)
@@ -396,9 +416,9 @@ class CDDLinkLevelOrchestrator:
                     "tb_error": int(not dec.tb_success),
                     "cb_errors": int(sum(1 for ok in dec.cb_success if not ok)),
                     "ce_nmse_eff": ce_nmse,
-                    "cond_number": float(estimator.condition_number),
-                    "numerical_jitter": float(estimator.numerical_jitter),
-                    "covariance_type": estimator.covariance_type,
+                    "cond_number": float(estimator.condition_number) if estimator else float("nan"),
+                    "numerical_jitter": float(estimator.numerical_jitter) if estimator else 0.0,
+                    "covariance_type": estimator.covariance_type if estimator else "ideal_csi",
                 })
 
             if trials >= target_trials and (min_errors <= 0 or tb_errors >= min_errors):
@@ -417,10 +437,10 @@ class CDDLinkLevelOrchestrator:
             "cb_bler": float(cb_errors) / float(n_cb_trials),
             "ce_nmse_eff": self._mean(ce_nmse_values),
             "ce_nmse_branch": float("nan"),
-            "cond_number": float(estimator.condition_number),
+            "cond_number": float(estimator.condition_number) if estimator else float("nan"),
             "effective_rank": float("nan"),
-            "numerical_jitter": float(estimator.numerical_jitter),
-            "covariance_type": estimator.covariance_type,
+            "numerical_jitter": float(estimator.numerical_jitter) if estimator else 0.0,
+            "covariance_type": estimator.covariance_type if estimator else "ideal_csi",
             "true_covariance_type": true_covariance.covariance_type,
             "tbs_bits": int(tb.tb_size),
             "coded_bits": int(tb.coded_bits),
@@ -493,6 +513,7 @@ class CDDLinkLevelOrchestrator:
             "channel_model": str(cfg.channel.model),
             "channel_backend": str(getattr(cfg.channel, "backend", "legacy_exponential")),
             "tdl_profile": str(getattr(cfg.channel, "tdl_profile", "")),
+            "cdl_profile": str(getattr(cfg.channel, "cdl_profile", "")),
             "delay_spread_ns": float(cfg.channel.delay_spread_ns),
             "carrier_frequency_hz": float(getattr(cfg.channel, "carrier_frequency_hz", float("nan"))),
             "speed_kmh": float(getattr(cfg.channel, "ue_speed_kmh", 0.0)),

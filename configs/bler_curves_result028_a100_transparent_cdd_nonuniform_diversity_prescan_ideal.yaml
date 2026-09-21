@@ -1,0 +1,40 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/transparent_cdd_nonuniform_diversity_prescan_ideal
+seed: 20260727
+batch_size: 20
+max_passes: 1
+
+scenes:
+  - scenario_id: A100
+    mode: transparent_cdd_physical_covariance
+    plan_section: 13
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_cdd_baselines:
+      - candidate_id: A100_SMALL_CDD_NU419_TRANSPARENT_CDD
+        delay_grid_coordinates: [-1, -0.6021138567581448, 0.0895996186153063, 0.6239161297150366, 1.5984488322422608, 2.6801431206827058, 3.826494734287368, 4.322142395582422]
+        family: TRANSPARENT_CDD_NONUNIFORM_SEARCH
+        label: nonuniform small-delay CDD 419
+      - candidate_id: A100_SMALL_CDD_NU1100_TRANSPARENT_CDD
+        delay_grid_coordinates: [-0.75, -0.29809293777231693, -0.05505748890107687, 0.9387998633766634, 1.873540817584035, 3.0169058861647016, 4.1646556275916815, 4.391081388131776]
+        family: TRANSPARENT_CDD_NONUNIFORM_SEARCH
+        label: nonuniform small-delay CDD 1100
+      - candidate_id: A100_SMALL_CDD_NU126_TRANSPARENT_CDD
+        delay_grid_coordinates: [-1, -0.7414683241142626, -0.17562137895638907, 0.7033701780596064, 1.2344736058932755, 2.3922171517916433, 3.405211310731164, 4.454550929516178]
+        family: TRANSPARENT_CDD_NONUNIFORM_SEARCH
+        label: nonuniform small-delay CDD 126
+    paired_policy:
+      target_errors: 1
+      min_total_trials: 300
+      max_total_trials: 300
+      max_interval_trials: 300
+    max_snr_tasks_per_run: 8
+    receivers:
+      ideal:
+        snr_db: [14, 14.25, 14.5, 14.75, 15, 15.5, 15.75, 16]
+        target_errors: 1
+        min_total_trials: 300
+        max_total_trials: 300
+        stop_below_bler: null

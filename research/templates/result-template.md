@@ -1,6 +1,6 @@
-# result-NNN：实验标题
+# result-NNN-任务缩略词：实验标题
 
-> 对应 `research/plan-NNN.md`。无图版：`research/result-NNN-text.md`。
+> 对应 `research/plan-NNN-任务缩略词.md`。无图版：`research/result-NNN-任务缩略词-text.md`。
 
 ## 1. TL;DR 与配置回执
 

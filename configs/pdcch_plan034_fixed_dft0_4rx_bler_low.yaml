@@ -1,0 +1,59 @@
+schema: pdcch-cdd-bler-v2
+output_dir: outputs/experiment034_rsrp_pdcch_4t4r/20260916_plan034/bler/low
+seed: 20260916
+random_stream_namespace: plan034_fixed_dft0_low_v1
+batch_size: 50
+antenna: {n_tx: 4, n_rx: 4}
+resource:
+  n_rb: 48
+  duration_symbols: 2
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 1
+  first_cce: 0
+pdcch:
+  payload_bits: 40
+  coded_bits: 108
+  crc_rnti: 65535
+  scrambling_id: 208
+  data_scrambling_rnti: 0
+  polar_list_size: 8
+  polar_decoder_type: hybSCL
+  polar_cpu_only: true
+  coreset_start_symbol: 0
+  slot_number: 0
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: C
+  delay_spread_ns: 300.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 3.0
+  num_sinusoids: 20
+  normalize: true
+receiver:
+  channel_estimation: frequency_lmmse
+  llr_clip: 50.0
+simulation:
+  snr_points_db: [-3.0, -2.0, -1.0, 0.0]
+  min_trials_per_snr: 2000
+  target_errors: 200
+  max_trials_per_snr: 5000
+  target_bler: 0.01
+  save_trial_error_flags: true
+  save_batch_checkpoints: true
+  resume: true
+  progress_every_batches: 10
+candidates:
+  - candidate_id: C300_AL1_FIXED_DFT0_NR4_EST
+    family: FIXED_DFT0
+    scheme: reg_bundle_dft_cycling
+    receiver_covariance_mode: physical_prg
+    label: C300 AL1 fixed DFT0 4Rx estimated CSI
+    cycling_order: [0]
+    style: {color: '#1f77b4', linestyle: '-', marker: o}

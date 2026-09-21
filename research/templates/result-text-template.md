@@ -1,4 +1,4 @@
-# result-NNN-text：实验标题（无图版）
+# result-NNN-任务缩略词-text：实验标题（无图版）
 
 > 对应同编号 plan 和给人版。禁止嵌入图片。
 

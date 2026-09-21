@@ -1351,7 +1351,7 @@ def main() -> None:
     save_json(
         {
             "command": [sys.executable, *sys.argv],
-            "plan_sha256": file_sha256(ROOT / "research" / "plan-027.md"),
+            "plan_sha256": file_sha256(ROOT / "research" / "plan-027-有效矩-Sidon-DMRS.md"),
             "script_sha256": file_sha256(Path(__file__)),
         },
         output / f"commands_{args.stage}.json",

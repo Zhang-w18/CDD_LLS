@@ -1,0 +1,40 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260803_main/transparent_cdd_strict_diversity_prescan_ideal
+seed: 20260727
+batch_size: 20
+max_passes: 1
+
+scenes:
+  - scenario_id: A100
+    mode: transparent_cdd_physical_covariance
+    plan_section: 13
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    transparent_cdd_baselines:
+      - candidate_id: A100_SMALL_CDD_STRICT512_TRANSPARENT_CDD
+        delay_grid_coordinates: [-0.75, -0.5881588162481517, -0.3934827742815943, -0.12846160007940122, 0.5645272524222211, 1.0108750753299287, 1.8030895119760455, 2.7408216662551523]
+        family: TRANSPARENT_CDD_STRICT_CE_SEARCH
+        label: strict-CE nonuniform CDD 512
+      - candidate_id: A100_SMALL_CDD_STRICT2717_TRANSPARENT_CDD
+        delay_grid_coordinates: [-0.75, -0.6286838856150396, -0.03690256624247046, 0.0756489126928106, 0.45856291237065805, 0.9847526186824276, 1.7239788978808308, 2.827984167958107]
+        family: TRANSPARENT_CDD_STRICT_CE_SEARCH
+        label: strict-CE nonuniform CDD 2717
+      - candidate_id: A100_SMALL_CDD_STRICT8263_TRANSPARENT_CDD
+        delay_grid_coordinates: [-0.75, -0.6441578172090183, -0.4232914387586246, -0.20176604413630228, 0.5936518750446993, 1.1776850367200484, 1.9863260227898762, 2.4551325054894164]
+        family: TRANSPARENT_CDD_STRICT_CE_SEARCH
+        label: strict-CE nonuniform CDD 8263
+    paired_policy:
+      target_errors: 1
+      min_total_trials: 300
+      max_total_trials: 300
+      max_interval_trials: 300
+    max_snr_tasks_per_run: 8
+    receivers:
+      ideal:
+        snr_db: [14, 14.25, 14.5, 14.75, 15, 15.5, 15.75, 16]
+        target_errors: 1
+        min_total_trials: 300
+        max_total_trials: 300
+        stop_below_bler: null

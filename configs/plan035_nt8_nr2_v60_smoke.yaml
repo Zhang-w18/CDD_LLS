@@ -1,0 +1,14 @@
+schema: plan035-pdsch-2rx-v1
+run_kind: smoke
+output_dir: outputs/experiment035_pdsch_2rx/20260917_fix1/smoke/A100_NT8_NR2_V60
+seed: 20260727
+batch_size: 25
+target_total_trials: 20
+n_tx: 8
+n_rx: 2
+speed_kmh: 60
+receiver_modes: [estimated, ideal]
+feedback_period_slots: 10
+history_symbol_index: 140
+precoder_normalize: true
+snr_db: [4, 18]

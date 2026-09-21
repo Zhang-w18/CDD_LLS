@@ -1,0 +1,16 @@
+schema: bler-curve-runner-v1
+output_dir: outputs/experiment028_csi_curves/20260811_4rx_subset/smoke/batch100
+seed: 20260727
+batch_size: 100
+max_passes: 1
+scenes:
+  - scenario_id: A100
+    n_rx: 4
+    plan_section: 14
+    manifest:
+      path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+      sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+      approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json
+    candidate_ids: [A100_AP_RMS_T1]
+    receivers:
+      ideal: {snr_db: [5], target_errors: 0, fixed_total_trials: 300, min_total_trials: 300, max_total_trials: 300, stop_below_bler: null}
