@@ -1,0 +1,92 @@
+antenna:
+  n_tx: 32
+  n_rx: 4
+
+resource:
+  carrier_bandwidth_mhz: 20.0
+  scs_khz: 30
+  n_fft: 256
+  n_prbs: 4
+  pdsch_n_symbols: 4
+  dmrs_symbol_indices: [1]
+  dmrs_spacing_sc: 6
+  dmrs_offset_sc: 0
+  cyclic_prefix_length: 18
+  prg_size_rb: 2
+
+channel:
+  backend: fixed_cdl_statistics
+  model: 3gpp_tr38901_cdl
+  cdl_profile: C
+  delay_spread_ns: 300.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 0.0
+  cdl_direction: downlink
+
+fixed_cdl_statistics:
+  covariance_realizations: 2
+  statistics_seed: 20261001
+  realization_seed: 20262001
+  mean_aod_deg: 0.0
+  aod_scale: 1.0
+  aoa_scale: 1.0
+  zod_scale: 1.0
+  zoa_scale: 1.0
+  bs_vertical_aes: 8
+  bs_horizontal_aes: 8
+  bs_polarizations: 2
+  bs_vertical_txrus_per_pol: 2
+  bs_horizontal_txrus_per_pol: 8
+  bs_vertical_spacing_lambda: 0.8
+  bs_horizontal_spacing_lambda: 0.5
+  bs_antenna_pattern: 38.901
+  bs_polarization_type: cross
+  ue_vertical_elements: 1
+  ue_horizontal_elements: 2
+  ue_polarizations: 2
+  ue_vertical_spacing_lambda: 0.5
+  ue_horizontal_spacing_lambda: 0.5
+  ue_antenna_pattern: omni
+  ue_polarization_type: cross
+  ssb_horizontal_beams: 8
+  secondary_horizontal_beams: 16
+  pol_cycling_phase_deg: [0.0, 90.0]
+  beam_cdd_delay_grid_indices: [0.0, 1.0]
+
+transmission:
+  tx_scheme: BASELINE
+
+channel_estimation:
+  ce_method: IDEAL
+
+mcs:
+  table: nr_256qam
+  index: 8
+
+receiver:
+  max_ldpc_iterations: 2
+  llr_clip: 50.0
+
+simulation:
+  snr_points_db: [0.0]
+  n_trials_per_snr: 1
+  min_block_errors: 0
+  max_trials_per_snr: 1
+  seed: 20260921
+  output_dir: outputs/smoke_fixed_cdl_statistics_32tx_4rx
+  run_id: smoke
+  common_random_numbers: true
+  save_trial_metrics: true
+
+variants:
+  - variant_id: baseline
+    transmission: {tx_scheme: BASELINE}
+  - variant_id: polarization_cycling
+    transmission: {tx_scheme: POLARIZATION_CYCLING}
+  - variant_id: beam_cycling
+    transmission: {tx_scheme: BEAM_CYCLING}
+  - variant_id: beam_cdd
+    transmission: {tx_scheme: BEAM_CDD}
+
+plots:
+  enabled: false

@@ -995,7 +995,7 @@ python tools/analyze_plan031_cdd911.py --bootstrap-repeats 4000
 
 执行记录：原三条曲线的旧网格 29/29 点已完成，共 770,800 trials、61,660 errors，逐 trial、Wilson 区间和 CE NMSE 审计无差异；CDD130 ideal 的 1Rx/2Rx 均取得原始 BLER 不高于 0.01 的点，Sidon transparent 1Rx 在原最高 13 dB 的最低 BLER 为 0.7514。两份 codebook 配置的 25/25 个缺失点也已完成，共 504,200 trials、6,648 errors；结合历史 `C300_PRG_DFT4_6REG` 的 7 个复用点，两类 codebook 的四条 2Rx 曲线均形成完整 8 点网格并已更新第 11.2 节图表。按本次统一 54 点网格现已有 49 点，尚需补 Sidon transparent 1Rx 的 `15,16,17,18` 和 CDD130 ideal 1Rx 的 `15`；完成这 5 点并重新审计前，本补充仍标记为部分已执行、待确认。
 
-## 2026-09-20 补充规划：CDD911 non-transparent 与 CDD130 transparent 的 4Tx/2Rx AL2/AL4 estimated-CSI BLER（待执行）
+## 2026-09-20 补充规划：CDD911 non-transparent 与 CDD130 transparent 的 4Tx/2Rx AL2/AL4 estimated-CSI BLER（已执行，数据待分析）
 
 现有数据只覆盖这两种口径的 AL1，尚无 4Tx/2Rx、AL2/AL4 的 estimated-CSI 曲线。本补充一次性增加 `CDD911`（`[0,0,911,911] ns`，`matched_effective`，即 non-transparent）和 `CDD130_transparent`（`[0,0,130,130] ns`，`physical_fullband`）在 AL2、AL4 下的四条曲线，不重复规划相同场景，也不新增 ideal-CSI 数据。
 
@@ -1012,4 +1012,4 @@ python tools/run_plan031_candidates.py --config configs/pdcch_result031_cdd911_c
 python tools/run_plan031_candidates.py --config configs/pdcch_result031_cdd911_cdd130_2rx_estimated_al2_formal.yaml --config configs/pdcch_result031_cdd911_cdd130_2rx_estimated_al4_formal.yaml --stage run --max-workers 4
 ```
 
-准备记录：四个 candidate/AL shard 的 validate 已通过。误启动的正式运行已停止；AL2 两条曲线各保存了首个 SNR 点的 10,000 trials，后续执行上述 `--stage run` 命令会从已保存进度继续。AL4 尚未完成首个点。
+执行记录：四个 candidate/AL shard 的 validate 均通过，63/63 个固定 candidate/SNR 点全部完成停止条件，共 1,370,950 trials、29,167 errors；四个 shard 的 resolved config、run metadata、运行日志、逐点 error flags 和 estimated-CSI NMSE 文件齐全。原始数据已保存到上述输出目录。研究者随后要求把 AL2/AL4 的 CDD911、CDD130、B0 QC、S0 Sidon 和 PRG DFT4 estimated-CSI BLER 画为一张双子图；已由 `tools/plot_plan031_cdd911_cdd130_al2_al4.py` 读取正式 CSV 生成，图中不显示误差棒，竖向主/次网格间隔分别为 0.5/0.25 dB。尚未分析目标 SNR 或修改两版 result。

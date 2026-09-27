@@ -1,0 +1,210 @@
+schema: pdcch-cdd-bler-v2
+output_dir: outputs/experiment038_pdcch_a40/20260922_4tx_2rx_2sym/formal/al4
+seed: 20260922
+batch_size: 50
+antenna:
+  n_tx: 4
+  n_rx: 2
+resource:
+  n_rb: 48
+  duration_symbols: 2
+  n_fft: 4096
+  scs_khz: 30
+  cyclic_prefix_length: 288
+  cce_reg_mapping: noninterleaved
+  reg_bundle_size: 6
+  interleaver_size: 2
+  shift_index: 0
+  aggregation_level: 4
+  first_cce: 0
+pdcch:
+  payload_bits: 40
+  coded_bits: 432
+  crc_rnti: 65535
+  scrambling_id: 208
+  data_scrambling_rnti: 0
+  polar_list_size: 8
+  polar_decoder_type: hybSCL
+  polar_cpu_only: true
+  coreset_start_symbol: 0
+  slot_number: 0
+channel:
+  backend: sionna_tdl
+  model: tdl
+  tdl_profile: C
+  delay_spread_ns: 300.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 3.0
+  num_sinusoids: 20
+  normalize: true
+receiver:
+  channel_estimation: frequency_lmmse
+  llr_clip: 50.0
+simulation:
+  snr_points_db:
+  - -6
+  - -5
+  - -4
+  - -3
+  - -2
+  - -1
+  - 0
+  - 1
+  - 2
+  min_trials_per_snr: 10000
+  target_errors: 200
+  max_trials_per_snr: 50000
+  target_bler: 0.01
+  save_trial_error_flags: true
+  resume: true
+  progress_every_batches: 50
+candidates:
+- candidate_id: SIDON_MATCHED
+  family: S0_SIDON
+  scheme: cdd
+  receiver_covariance_mode: matched_effective
+  label: Sidon non-transparent
+  delay_grid_coordinates:
+  - 0
+  - 1
+  - 3
+  - 7
+  snr_points_db:
+  - -3.0
+  - -2.75
+  - -2.5
+  - -2.25
+  - -2.0
+- candidate_id: SIDON_TRANSPARENT
+  family: S0_SIDON
+  scheme: cdd
+  receiver_covariance_mode: physical_fullband
+  label: Sidon transparent
+  delay_grid_coordinates:
+  - 0
+  - 1
+  - 3
+  - 7
+  snr_points_db:
+  - -3.0
+  - -2.75
+  - -2.5
+  - -2.25
+  - -2.0
+- candidate_id: B0QC_MATCHED
+  family: B0_QC
+  scheme: cdd
+  receiver_covariance_mode: matched_effective
+  label: B0 QC non-transparent
+  delay_grid_coordinates:
+  - 0
+  - 2.25
+  - 4.5
+  - 6.75
+  snr_points_db:
+  - -4.0
+  - -3.75
+  - -3.5
+  - -3.25
+  - -3.0
+- candidate_id: B0QC_TRANSPARENT
+  family: B0_QC
+  scheme: cdd
+  receiver_covariance_mode: physical_fullband
+  label: B0 QC transparent
+  delay_grid_coordinates:
+  - 0
+  - 2.25
+  - 4.5
+  - 6.75
+  snr_points_db:
+  - -4.0
+  - -3.75
+  - -3.5
+  - -3.25
+  - -3.0
+- candidate_id: CDD911_MATCHED
+  family: CDD911
+  scheme: cdd
+  receiver_covariance_mode: matched_effective
+  allow_duplicate_delays: true
+  label: CDD911 non-transparent
+  delay_grid_coordinates:
+  - 0
+  - 0
+  - 3.93552
+  - 3.93552
+  snr_points_db:
+  - -3.0
+  - -2.75
+  - -2.5
+  - -2.25
+  - -2.0
+- candidate_id: CDD911_TRANSPARENT
+  family: CDD911
+  scheme: cdd
+  receiver_covariance_mode: physical_fullband
+  allow_duplicate_delays: true
+  label: CDD911 transparent
+  delay_grid_coordinates:
+  - 0
+  - 0
+  - 3.93552
+  - 3.93552
+  snr_points_db:
+  - -3.0
+  - -2.75
+  - -2.5
+  - -2.25
+  - -2.0
+- candidate_id: CDD130_MATCHED
+  family: CDD130
+  scheme: cdd
+  receiver_covariance_mode: matched_effective
+  allow_duplicate_delays: true
+  label: CDD130 non-transparent
+  delay_grid_coordinates:
+  - 0
+  - 0
+  - 0.5616
+  - 0.5616
+  snr_points_db:
+  - -2.0
+  - -1.75
+  - -1.5
+  - -1.25
+  - -1.0
+- candidate_id: CDD130_TRANSPARENT
+  family: CDD130
+  scheme: cdd
+  receiver_covariance_mode: physical_fullband
+  allow_duplicate_delays: true
+  label: CDD130 transparent
+  delay_grid_coordinates:
+  - 0
+  - 0
+  - 0.5616
+  - 0.5616
+  snr_points_db:
+  - -2.0
+  - -1.75
+  - -1.5
+  - -1.25
+  - -1.0
+- candidate_id: PRG_DFT4_TRANSPARENT
+  family: PRG_DFT
+  scheme: reg_bundle_dft_cycling
+  receiver_covariance_mode: physical_prg
+  label: Precoder cycling transparent
+  cycling_order:
+  - 0
+  - 1
+  - 2
+  - 3
+  snr_points_db:
+  - -4.0
+  - -3.75
+  - -3.5
+  - -3.25
+  - -3.0
+random_stream_namespace: plan038-a40-al4-formal-v1

@@ -25,7 +25,7 @@ from tools import run_plan033_tdl_mobility_mimo as core
 
 
 SCHEMA = "plan037-pdsch-tx-scaling-v1"
-PLAN_PATH = "research/plan-037-PDSCH-Tx数影响.md"
+PLAN_PATH = "research/plan-037-PDSCH-Tx数影响-CDL开发.md"
 K = 576
 FOLD_PERIOD = 96
 

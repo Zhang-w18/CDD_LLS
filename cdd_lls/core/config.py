@@ -57,6 +57,48 @@ class ChannelConfig:
 
 
 @dataclass
+class FixedCDLStatisticsConfig:
+    covariance_realizations: int = 1000
+    statistics_seed: int = 20261001
+    realization_seed: int = 20262001
+    velocity_azimuth_deg: float = 0.0
+    velocity_elevation_deg: float = 0.0
+    mean_aod_deg: float = 0.0
+    aod_scale: float = 1.0
+    target_aod_asd_deg: Optional[float] = None
+    aoa_scale: float = 1.0
+    zod_scale: float = 1.0
+    zoa_scale: float = 1.0
+    bs_vertical_aes: int = 8
+    bs_horizontal_aes: int = 8
+    bs_polarizations: int = 2
+    bs_vertical_txrus_per_pol: int = 2
+    bs_horizontal_txrus_per_pol: int = 8
+    bs_vertical_spacing_lambda: float = 0.8
+    bs_horizontal_spacing_lambda: float = 0.5
+    bs_antenna_pattern: str = "38.901"
+    bs_polarization_type: str = "cross"
+    bs_orientation_deg: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
+    ue_vertical_elements: int = 1
+    ue_horizontal_elements: int = 1
+    ue_polarizations: int = 2
+    ue_vertical_spacing_lambda: float = 0.5
+    ue_horizontal_spacing_lambda: float = 0.5
+    ue_antenna_pattern: str = "omni"
+    ue_polarization_type: str = "cross"
+    ue_orientation_deg: List[float] = field(default_factory=lambda: [180.0, 0.0, 0.0])
+    ssb_horizontal_beams: int = 8
+    secondary_horizontal_beams: int = 16
+    pol_cycling_phase_deg: List[float] = field(default_factory=lambda: [0.0, 90.0])
+    beam_cdd_delay_grid_indices: List[float] = field(default_factory=lambda: [0.0, 1.0])
+    codebook_type: str = "legacy_parent_secondary"
+    profile_native_angles: bool = False
+    frozen_beam_manifest: str = ""
+    frozen_beam_manifest_sha256: str = ""
+    selection_only: bool = False
+
+
+@dataclass
 class TransmissionConfig:
     tx_scheme: str = "CDD"
     cdd_delay_vector: Optional[List[float]] = field(default_factory=lambda: [0, 8])
@@ -105,6 +147,8 @@ class SimulationConfig:
     bler_target: float = 0.10
     save_trial_metrics: bool = False
     common_random_numbers: bool = True
+    absolute_trial_start: int = 0
+    ce_only: bool = False
 
 
 @dataclass
@@ -123,6 +167,7 @@ class PlatformConfig:
     antenna: AntennaConfig = field(default_factory=AntennaConfig)
     resource: ResourceConfig = field(default_factory=ResourceConfig)
     channel: ChannelConfig = field(default_factory=ChannelConfig)
+    fixed_cdl_statistics: FixedCDLStatisticsConfig = field(default_factory=FixedCDLStatisticsConfig)
     transmission: TransmissionConfig = field(default_factory=TransmissionConfig)
     channel_estimation: ChannelEstimationConfig = field(default_factory=ChannelEstimationConfig)
     receiver: ReceiverConfig = field(default_factory=ReceiverConfig)
@@ -159,6 +204,7 @@ def _construct_dataclass(cls, data: Dict[str, Any]):
         "antenna": AntennaConfig,
         "resource": ResourceConfig,
         "channel": ChannelConfig,
+        "fixed_cdl_statistics": FixedCDLStatisticsConfig,
         "transmission": TransmissionConfig,
         "channel_estimation": ChannelEstimationConfig,
         "receiver": ReceiverConfig,
@@ -180,8 +226,8 @@ def _construct_dataclass(cls, data: Dict[str, Any]):
 
 
 def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
-    if int(config.antenna.n_tx) not in (1, 2, 4, 8):
-        raise ValueError(f"antenna.n_tx must be 1, 2, 4, or 8. config={source_path}")
+    if int(config.antenna.n_tx) not in (1, 2, 4, 8, 16, 32):
+        raise ValueError(f"antenna.n_tx must be 1, 2, 4, 8, 16, or 32. config={source_path}")
     if int(config.antenna.n_rx) <= 0:
         raise ValueError(f"antenna.n_rx must be positive. config={source_path}")
     if int(config.resource.n_prbs) <= 0:
@@ -198,9 +244,10 @@ def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
            for s in config.resource.dmrs_symbol_indices):
         raise ValueError(f"resource.dmrs_symbol_indices are outside the PDSCH grid. config={source_path}")
     backend = str(config.channel.backend).lower()
-    if backend not in ("legacy_exponential", "sionna_tdl", "sionna_cdl"):
+    if backend not in ("legacy_exponential", "sionna_tdl", "sionna_cdl", "fixed_cdl_statistics"):
         raise ValueError(
-            "channel.backend must be legacy_exponential, sionna_tdl, or sionna_cdl. "
+            "channel.backend must be legacy_exponential, sionna_tdl, sionna_cdl, or "
+            "fixed_cdl_statistics. "
             f"config={source_path}"
         )
     if str(config.channel.tdl_profile).upper() not in ("A", "B", "C", "D", "E", "A30", "B100", "C300"):
@@ -261,8 +308,118 @@ def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
                 "CDL Rx array rows*cols must equal antenna.n_rx; zero cols selects an automatic ULA. "
                 f"config={source_path}"
             )
+    if backend == "fixed_cdl_statistics":
+        fixed = config.fixed_cdl_statistics
+        if str(config.channel.cdl_direction).lower() != "downlink":
+            raise ValueError(f"fixed_cdl_statistics currently requires downlink. config={source_path}")
+        if int(fixed.covariance_realizations) <= 0:
+            raise ValueError(f"fixed CDL covariance_realizations must be positive. config={source_path}")
+        if int(fixed.statistics_seed) == int(fixed.realization_seed):
+            raise ValueError(f"fixed CDL statistics and realization seeds must differ. config={source_path}")
+        if int(fixed.bs_polarizations) != 2:
+            raise ValueError(f"fixed CDL BS array must use two polarizations. config={source_path}")
+        if int(fixed.ue_polarizations) not in (1, 2):
+            raise ValueError(f"fixed CDL UE polarizations must be 1 or 2. config={source_path}")
+        if int(fixed.bs_vertical_aes) % int(fixed.bs_vertical_txrus_per_pol) or int(
+            fixed.bs_horizontal_aes
+        ) % int(fixed.bs_horizontal_txrus_per_pol):
+            raise ValueError(f"fixed CDL BS AE dimensions must be divisible by TXRU dimensions. config={source_path}")
+        expected_tx = (
+            int(fixed.bs_vertical_txrus_per_pol)
+            * int(fixed.bs_horizontal_txrus_per_pol)
+            * int(fixed.bs_polarizations)
+        )
+        expected_rx = (
+            int(fixed.ue_vertical_elements)
+            * int(fixed.ue_horizontal_elements)
+            * int(fixed.ue_polarizations)
+        )
+        if expected_tx != int(config.antenna.n_tx):
+            raise ValueError(
+                f"fixed CDL BS TXRU count {expected_tx} must equal antenna.n_tx={config.antenna.n_tx}. "
+                f"config={source_path}"
+            )
+        if expected_rx != int(config.antenna.n_rx):
+            raise ValueError(
+                f"fixed CDL UE port count {expected_rx} must equal antenna.n_rx={config.antenna.n_rx}. "
+                f"config={source_path}"
+            )
+        codebook_type = str(fixed.codebook_type).lower()
+        if codebook_type not in {
+            "legacy_parent_secondary", "dft_2x8_same_pol", "wide_beam_split",
+            "angular_full_coverage_ultrawide",
+        }:
+            raise ValueError(f"Unsupported fixed CDL codebook_type={fixed.codebook_type!r}. config={source_path}")
+        if codebook_type == "legacy_parent_secondary":
+            if int(fixed.secondary_horizontal_beams) != 2 * int(fixed.ssb_horizontal_beams):
+                raise ValueError(f"fixed CDL requires two secondary beams per SSB. config={source_path}")
+            if len(fixed.pol_cycling_phase_deg) < 1 or len(fixed.beam_cdd_delay_grid_indices) != 2:
+                raise ValueError(f"fixed CDL polarization/CDD patterns are invalid. config={source_path}")
+            supported = {"BASELINE", "POLARIZATION_CYCLING", "BEAM_CYCLING", "BEAM_CDD"}
+        else:
+            supported = (
+                {"BEAM8_B0_QC", "BEAM8_SIDON_SELECTED", "BEAM8_PRECODER_CYCLING"}
+                if codebook_type == "angular_full_coverage_ultrawide"
+                else {"BEAM8_B0_QC", "BEAM8_S0_SIDON", "BEAM8_PRECODER_CYCLING"}
+            )
+            if codebook_type == "angular_full_coverage_ultrawide":
+                if bool(fixed.profile_native_angles):
+                    raise ValueError(f"Plan-039 requires transformed AoD angles. config={source_path}")
+                if fixed.target_aod_asd_deg is None or float(fixed.target_aod_asd_deg) <= 0.0:
+                    raise ValueError(f"Plan-039 requires positive target_aod_asd_deg. config={source_path}")
+                if any(float(value) != 1.0 for value in (fixed.aoa_scale, fixed.zod_scale, fixed.zoa_scale)):
+                    raise ValueError(f"Plan-039 only permits AoD transformation. config={source_path}")
+            else:
+                if not bool(fixed.profile_native_angles):
+                    raise ValueError(f"dft_2x8_same_pol requires profile_native_angles=true. config={source_path}")
+                if any(float(value) != expected for value, expected in zip(
+                    (fixed.mean_aod_deg, fixed.aod_scale, fixed.aoa_scale, fixed.zod_scale, fixed.zoa_scale),
+                    (0.0, 1.0, 1.0, 1.0, 1.0),
+                )):
+                    raise ValueError(f"dft_2x8_same_pol forbids angle shifts/scales. config={source_path}")
+            if (not bool(fixed.selection_only)) and (
+                not fixed.frozen_beam_manifest or len(str(fixed.frozen_beam_manifest_sha256)) != 64
+            ):
+                raise ValueError(f"dft_2x8_same_pol requires a frozen manifest path and SHA-256. config={source_path}")
+            if int(config.resource.n_prbs) != 48 or int(config.resource.n_fft) != 4096:
+                raise ValueError(f"dft_2x8_same_pol requires 48 PRB and FFT 4096. config={source_path}")
+        if str(config.transmission.tx_scheme).upper() not in supported:
+            raise ValueError(
+                f"fixed CDL transmission.tx_scheme must be one of {sorted(supported)}. config={source_path}"
+            )
+        ce_method = str(config.channel_estimation.ce_method).upper()
+        if codebook_type in {"wide_beam_split", "angular_full_coverage_ultrawide"}:
+            from cdd_lls.phy.plan039 import CE_METHODS
+            allowed_ce = {"IDEAL", *CE_METHODS}
+            if ce_method not in allowed_ce:
+                raise ValueError(f"Plan-039 CE method must be one of {sorted(allowed_ce)}. config={source_path}")
+            scheme = str(config.transmission.tx_scheme).upper()
+            if scheme == "BEAM8_PRECODER_CYCLING" and ce_method not in {"IDEAL", "PLAN039_PRG_COMMON_REFERENCE_PDP"}:
+                raise ValueError("Plan-039 cycling requires IDEAL or PRG common-reference PDP estimation.")
+            if scheme != "BEAM8_PRECODER_CYCLING" and ce_method == "PLAN039_PRG_COMMON_REFERENCE_PDP":
+                raise ValueError("Plan-039 PRG estimator is only valid for precoder cycling.")
+            if scheme == "BEAM8_PRECODER_CYCLING" and ce_method == "PLAN039_TRANSPARENT_COMMON_REFERENCE_PDP":
+                raise ValueError("Plan-039 full-band transparent estimator is only valid for CDD schemes.")
+        elif codebook_type == "dft_2x8_same_pol":
+            allowed_ce = {"IDEAL", "BEAM8_PRG_LMMSE", "BEAM8_CDD_AWARE_LMMSE"}
+            if ce_method not in allowed_ce:
+                raise ValueError(f"Beam8 fixed CDL CE method must be one of {sorted(allowed_ce)}. config={source_path}")
+            scheme = str(config.transmission.tx_scheme).upper()
+            if scheme == "BEAM8_PRECODER_CYCLING" and ce_method not in {"IDEAL", "BEAM8_PRG_LMMSE"}:
+                raise ValueError(f"Beam8 cycling requires IDEAL or BEAM8_PRG_LMMSE. config={source_path}")
+            if scheme in {"BEAM8_B0_QC", "BEAM8_S0_SIDON"} and ce_method == "BEAM8_PRG_LMMSE":
+                raise ValueError(f"Beam8 CDD requires IDEAL or BEAM8_CDD_AWARE_LMMSE. config={source_path}")
+        elif ce_method != "IDEAL":
+            raise ValueError("Legacy fixed_cdl_statistics currently supports IDEAL only. " f"config={source_path}")
+        if not bool(config.simulation.common_random_numbers):
+            raise ValueError(
+                "fixed_cdl_statistics requires simulation.common_random_numbers=true. "
+                f"config={source_path}"
+            )
     if int(config.simulation.n_trials_per_snr) <= 0:
         raise ValueError(f"simulation.n_trials_per_snr must be positive. config={source_path}")
+    if int(config.simulation.absolute_trial_start) < 0:
+        raise ValueError(f"simulation.absolute_trial_start must be nonnegative. config={source_path}")
     if len(config.simulation.snr_range_db) != 3:
         raise ValueError(f"simulation.snr_range_db must be [start, stop, step]. config={source_path}")
 

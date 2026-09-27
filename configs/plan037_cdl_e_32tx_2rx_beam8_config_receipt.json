@@ -1,0 +1,10 @@
+{
+  "schema": "plan037-cdl-e-32tx-beam8-v1",
+  "manifest": "D:/07 2026/Simulation/CDD/CDD_LLS-main/CDD_LLS-main/outputs/experiment037_cdl_e_32tx_beam8/calibration/pdp/beam8_frozen_manifest.json",
+  "manifest_sha256": "475dd9d3ddc1b99c203dad6a50440e7ecbad8e7665c5334046c092102e27ceee",
+  "config_sha256": {
+    "plan037_cdl_e_32tx_2rx_beam8_smoke.yaml": "0db5d0547fd28ffcb8fe2491ffded3b4f9678c051a86a7e653749a12ca02fc96",
+    "plan037_cdl_e_32tx_2rx_beam8_prescan.yaml": "6a686d5ba14e84c5211aeac2d7cb202257a5da858ead756e317a1a49ee467a54",
+    "plan037_cdl_e_32tx_2rx_beam8_prescan_extend22.yaml": "6c395b092feb5108644bfade84ce219d358a10c25cc8e5306a9f1b91e2d24386"
+  }
+}

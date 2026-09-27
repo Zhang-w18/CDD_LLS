@@ -36,6 +36,7 @@ class TimeFrequencyRMMSEFilter:
     noise_variance: float
     condition_number: float
     numerical_jitter: float
+    minimum_singular_value: float
     covariance_type: str
     subfilter_diagnostics: tuple[dict[str, float | int], ...] = ()
 
@@ -486,6 +487,7 @@ def build_time_frequency_rmmse_filter(
         noise_variance=float(noise_variance),
         condition_number=float(np.linalg.cond(system)),
         numerical_jitter=float(jitter),
+        minimum_singular_value=float(np.linalg.svd(system, compute_uv=False)[-1]),
         covariance_type=str(covariance.covariance_type),
     )
 
@@ -509,6 +511,7 @@ def build_prg_time_frequency_rmmse_filter(
     diagnostics: list[dict[str, float | int]] = []
     maximum_condition = 0.0
     maximum_jitter = 0.0
+    minimum_singular = float("inf")
     for prg_index, start in enumerate(range(0, int(grid.n_sc), prg_size)):
         stop = start + prg_size
         pilot_rows = np.flatnonzero((pilot_local >= start) & (pilot_local < stop))
@@ -526,6 +529,7 @@ def build_prg_time_frequency_rmmse_filter(
         weights[np.ix_(data_rows, pilot_rows)] = local.weights
         maximum_condition = max(maximum_condition, float(local.condition_number))
         maximum_jitter = max(maximum_jitter, float(local.numerical_jitter))
+        minimum_singular = min(minimum_singular, float(local.minimum_singular_value))
         diagnostics.append(
             {
                 "prg_index": prg_index,
@@ -535,6 +539,7 @@ def build_prg_time_frequency_rmmse_filter(
                 "data_re_count": int(len(data_rows)),
                 "condition_number": float(local.condition_number),
                 "numerical_jitter": float(local.numerical_jitter),
+                "minimum_singular_value": float(local.minimum_singular_value),
             }
         )
     return TimeFrequencyRMMSEFilter(
@@ -544,6 +549,7 @@ def build_prg_time_frequency_rmmse_filter(
         noise_variance=float(noise_variance),
         condition_number=maximum_condition,
         numerical_jitter=maximum_jitter,
+        minimum_singular_value=minimum_singular,
         covariance_type=f"{covariance.covariance_type}_prg{prg_size}",
         subfilter_diagnostics=tuple(diagnostics),
     )

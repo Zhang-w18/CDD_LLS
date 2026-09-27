@@ -1,0 +1,170 @@
+antenna:
+  n_tx: 32
+  n_rx: 2
+resource:
+  carrier_bandwidth_mhz: 20.0
+  scs_khz: 30
+  n_fft: 4096
+  n_prbs: 48
+  pdsch_n_symbols: 10
+  dmrs_symbol_indices:
+  - 2
+  - 7
+  dmrs_spacing_sc: 6
+  dmrs_offset_sc: 0
+  cyclic_prefix_length: 288
+  prg_size_rb: 6
+channel:
+  backend: fixed_cdl_statistics
+  model: 3gpp_tr38901_cdl
+  tdl_profile: A
+  cdl_profile: E
+  delay_spread_ns: 100.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 60.0
+  num_sinusoids: 20
+  cdl_direction: downlink
+  cdl_tx_array_rows: 1
+  cdl_tx_array_cols: 0
+  cdl_rx_array_rows: 1
+  cdl_rx_array_cols: 0
+  cdl_polarization: single
+  cdl_polarization_type: V
+  cdl_antenna_pattern: omni
+  cdl_element_vertical_spacing: 0.5
+  cdl_element_horizontal_spacing: 0.5
+  pdp: exponential
+  max_delay_factor: 8.0
+  normalize: true
+fixed_cdl_statistics:
+  covariance_realizations: 1
+  statistics_seed: 20263701
+  realization_seed: 20263702
+  velocity_azimuth_deg: 0.0
+  velocity_elevation_deg: 0.0
+  mean_aod_deg: 0.0
+  aod_scale: 1.0
+  aoa_scale: 1.0
+  zod_scale: 1.0
+  zoa_scale: 1.0
+  bs_vertical_aes: 8
+  bs_horizontal_aes: 8
+  bs_polarizations: 2
+  bs_vertical_txrus_per_pol: 2
+  bs_horizontal_txrus_per_pol: 8
+  bs_vertical_spacing_lambda: 0.8
+  bs_horizontal_spacing_lambda: 0.5
+  bs_antenna_pattern: 38.901
+  bs_polarization_type: cross
+  bs_orientation_deg:
+  - 0.0
+  - 0.0
+  - 0.0
+  ue_vertical_elements: 1
+  ue_horizontal_elements: 1
+  ue_polarizations: 2
+  ue_vertical_spacing_lambda: 0.5
+  ue_horizontal_spacing_lambda: 0.5
+  ue_antenna_pattern: omni
+  ue_polarization_type: cross
+  ue_orientation_deg:
+  - 180.0
+  - 0.0
+  - 0.0
+  ssb_horizontal_beams: 8
+  secondary_horizontal_beams: 16
+  pol_cycling_phase_deg:
+  - 0.0
+  - 90.0
+  beam_cdd_delay_grid_indices:
+  - 0.0
+  - 1.0
+  codebook_type: dft_2x8_same_pol
+  profile_native_angles: true
+  frozen_beam_manifest: D:/07 2026/Simulation/CDD/CDD_LLS-main/CDD_LLS-main/outputs/experiment037_cdl_e_32tx_beam8/calibration/pdp/beam8_frozen_manifest.json
+  frozen_beam_manifest_sha256: 475dd9d3ddc1b99c203dad6a50440e7ecbad8e7665c5334046c092102e27ceee
+  selection_only: false
+transmission:
+  tx_scheme: BEAM8_B0_QC
+  cdd_delay_vector:
+  - 0
+  - 8
+  cdd_base_delay: 8
+  prg_codebook: qpsk_dft
+  prg_cycling_order: null
+channel_estimation:
+  ce_method: IDEAL
+  rmmse_bundle_rb: 4
+  diagonal_loading: 1.0e-08
+  recon_pair_spacing_pilots: 1
+  recon_regularization: 0.001
+  basis_support: truncated
+  basis_energy_threshold: 0.99
+  cond_warning_threshold: 1000.0
+receiver:
+  equalizer: zf_mrc
+  max_ldpc_iterations: 20
+  llr_clip: 50.0
+mcs:
+  table: nr_256qam
+  index: 8
+  qm: null
+  code_rate: null
+simulation:
+  snr_range_db:
+  - -4
+  - 12
+  - 2
+  snr_points_db:
+  - 16
+  - 18
+  - 20
+  - 22
+  n_trials_per_snr: 400
+  min_block_errors: 0
+  max_trials_per_snr: 400
+  seed: 20263703
+  output_dir: outputs/experiment037_cdl_e_32tx_beam8/prescan_extend22
+  run_id: prescan_extend22
+  bler_target: 0.1
+  save_trial_metrics: true
+  common_random_numbers: true
+  absolute_trial_start: 0
+sweeps:
+  cdd_base_delays: []
+  dmrs_spacing_sc: []
+plots:
+  enabled: false
+variants:
+- variant_id: beam8_b0_qc_ideal
+  transmission:
+    tx_scheme: BEAM8_B0_QC
+  channel_estimation:
+    ce_method: IDEAL
+- variant_id: beam8_b0_qc_estimated
+  transmission:
+    tx_scheme: BEAM8_B0_QC
+  channel_estimation:
+    ce_method: BEAM8_CDD_AWARE_LMMSE
+- variant_id: beam8_s0_sidon_ideal
+  transmission:
+    tx_scheme: BEAM8_S0_SIDON
+  channel_estimation:
+    ce_method: IDEAL
+- variant_id: beam8_s0_sidon_estimated
+  transmission:
+    tx_scheme: BEAM8_S0_SIDON
+  channel_estimation:
+    ce_method: BEAM8_CDD_AWARE_LMMSE
+- variant_id: beam8_precoder_cycling_ideal
+  transmission:
+    tx_scheme: BEAM8_PRECODER_CYCLING
+  channel_estimation:
+    ce_method: IDEAL
+- variant_id: beam8_precoder_cycling_estimated
+  transmission:
+    tx_scheme: BEAM8_PRECODER_CYCLING
+  channel_estimation:
+    ce_method: BEAM8_PRG_LMMSE
+scenarios:
+- scenario_id: E100_NT32_NR2_V60_BEAM8

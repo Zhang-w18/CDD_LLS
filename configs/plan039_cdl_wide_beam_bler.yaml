@@ -1,0 +1,97 @@
+antenna: {n_tx: 32, n_rx: 2}
+resource:
+  carrier_bandwidth_mhz: 20.0
+  scs_khz: 30
+  n_fft: 4096
+  n_prbs: 48
+  pdsch_n_symbols: 10
+  dmrs_symbol_indices: [2, 7]
+  dmrs_spacing_sc: 6
+  dmrs_offset_sc: 0
+  cyclic_prefix_length: 288
+  prg_size_rb: 6
+channel:
+  backend: fixed_cdl_statistics
+  model: 3gpp_tr38901_cdl
+  cdl_profile: C
+  delay_spread_ns: 100.0
+  carrier_frequency_hz: 4.0e9
+  ue_speed_kmh: 3.0
+  cdl_direction: downlink
+fixed_cdl_statistics:
+  covariance_realizations: 1
+  statistics_seed: 2026093901
+  realization_seed: 2026093902
+  velocity_azimuth_deg: 0.0
+  velocity_elevation_deg: 0.0
+  mean_aod_deg: 0.0
+  target_aod_asd_deg: 25.0
+  aod_scale: 1.0
+  aoa_scale: 1.0
+  zod_scale: 1.0
+  zoa_scale: 1.0
+  profile_native_angles: false
+  codebook_type: angular_full_coverage_ultrawide
+  selection_only: true
+  bs_vertical_aes: 8
+  bs_horizontal_aes: 8
+  bs_polarizations: 2
+  bs_vertical_txrus_per_pol: 2
+  bs_horizontal_txrus_per_pol: 8
+  bs_vertical_spacing_lambda: 0.8
+  bs_horizontal_spacing_lambda: 0.5
+  bs_antenna_pattern: 38.901
+  bs_polarization_type: cross
+  bs_orientation_deg: [0.0, 0.0, 0.0]
+  ue_vertical_elements: 1
+  ue_horizontal_elements: 1
+  ue_polarizations: 2
+  ue_vertical_spacing_lambda: 0.5
+  ue_horizontal_spacing_lambda: 0.5
+  ue_antenna_pattern: omni
+  ue_polarization_type: cross
+  ue_orientation_deg: [180.0, 0.0, 0.0]
+transmission: {tx_scheme: BEAM8_B0_QC}
+channel_estimation: {ce_method: IDEAL, diagonal_loading: 1.0e-8}
+receiver: {equalizer: zf_mrc, max_ldpc_iterations: 8, llr_clip: 50.0}
+mcs: {table: nr_256qam, index: 8}
+simulation:
+  snr_points_db: [0.0]
+  n_trials_per_snr: 1
+  min_block_errors: 0
+  max_trials_per_snr: 1
+  seed: 20260939
+  output_dir: outputs/experiment039_cdl_beam_bler/unused
+  run_id: unused
+  save_trial_metrics: true
+  common_random_numbers: true
+  absolute_trial_start: 0
+plots: {enabled: false}
+beam_design:
+  method: angular_full_coverage_ultrawide
+  target_aod_range_deg: [-60.0, 60.0]
+  target_zod_range_deg: [90.0, 110.0]
+  horizontal_samples: 241
+  vertical_samples: 81
+  regularization_grid: [1.0e-8, 1.0e-6, 1.0e-4, 1.0e-2, 1.0]
+  weight_constraint: unit_norm
+visualization: {enabled: true, pattern_grid_size: 241}
+plan039:
+  run_id: stage0_20260925
+  scenario_id: C_UE2R_DUAL_ASD25
+  target_aod_asd_deg: 25.0
+  diagnostic_aod_asd_deg: 10.0
+  correlation_realizations: 16
+  sidon_search: rule_inference_residue_lift_enumeration
+  selection_candidate_ranks: [1]
+  selection_candidate_delay_indices: [[0, 11, 28, 148, 170, 233, 277, 351]]
+  stage1b:
+    snr_min_db: 7.5
+    snr_max_db: 20.0
+    coarse_step_db: 0.5
+    fine_step_db: 0.25
+    cdd_refinement_db: [10.0, 15.0]
+    cycling_refinement_db: [15.0, 20.0]
+  smoke:
+    snr_points_db: [4.0, 12.0]
+    trials_per_snr: 20

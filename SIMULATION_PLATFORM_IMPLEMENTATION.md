@@ -2,11 +2,11 @@
 
 ## 1. 检查信息与适用范围
 
-- 最后更新：2026-09-17 11:34:36 +08:00（Asia/Singapore）
+- 最后更新：2026-09-24（Asia/Singapore）
 - 代码基线：Git `83b25bc` 加当前工作区 CDL 实现；本轮尚未创建 checkpoint
 - 本机依赖：Sionna 1.0.2、NumPy 1.26.4
-- 检查范围：PDCCH、PDSCH、多个接收天线、Sionna TDL/CDL 信道、预编码功率归一化、AWGN、最大比合并（maximum-ratio combining, MRC）以及用于观察分集增益的接收功率统计。
-- 主要实现位置：`cdd_lls/phy/channel_tdl.py`、`cdd_lls/phy/precoding.py`、`cdd_lls/sim/orchestrator.py`、`cdd_lls/sim/pdcch.py`、`cdd_lls/sim/pdcch_cdd.py`、`tools/run_bler_curves.py` 和 `tools/run_plan033_tdl_mobility_mimo.py`。
+- 检查范围：PDCCH、PDSCH、多个接收天线、Sionna TDL/CDL 信道、固定长期统计 CDL、预编码功率归一化、AWGN、最大比合并（maximum-ratio combining, MRC）以及用于观察分集增益的接收功率统计。
+- 主要实现位置：`cdd_lls/phy/channel_tdl.py`、`cdd_lls/phy/channel_cdl_fixed.py`、`cdd_lls/phy/cdl_beam_platform.py`、`cdd_lls/phy/precoding.py`、`cdd_lls/sim/orchestrator.py`、`cdd_lls/sim/pdcch.py`、`cdd_lls/sim/pdcch_cdd.py`、`tools/run_bler_curves.py`、`tools/run_plan033_tdl_mobility_mimo.py` 和 `tools/run_plan037_cdl_platform.py`。
 
 本文记录检查当日的实现事实。后续修改信道后端、预编码归一化、噪声注入或接收合并方式后，应更新检查日期和代码基线，并重新核对本文结论。
 
@@ -21,6 +21,8 @@
 7. 平台有两种数值归一化。PDCCH、通用 PDSCH 和 plan-033 使用每 RE 总发射功率 1、噪声方差 $1/\mathrm{SNR}$；固定 8Tx PDSCH BLER 入口保留每 RE 总发射功率 8、噪声方差 $8/\mathrm{SNR}$。两者的 SNR 定义相同。
 8. 通用 `run.py` 现可通过 `channel.backend` 选择 `sionna_tdl` 或 `sionna_cdl`。CDL-A～E 使用 Sionna `PanelArray` 的实际阵列几何生成空间相关 MIMO 信道；现阶段只支持单极化阵列。
 9. CDL 支持 `IDEAL`、`TF_RMMSE_KNOWN` 和 `TF_RMMSE_UNKNOWN` 接收机。两种 TF-RMMSE 的时间/频率协方差由 CDL cluster PDP 和 Doppler 构造，但没有纳入 CDL 的空间相关，因此是 spatial-unaware 近似，不是完全 matched CDL LMMSE。
+10. 通用 `run.py` 新增 `fixed_cdl_statistics` 后端。该后端固定 CDL cluster/ray、角度、XPR、阵列、ray coupling、速度方向和 parent SSB，只按独立 realization seed 重采样小尺度初始相位；长期发射协方差和公共参考接收功率由独立统计种子做 Monte Carlo 估计。当前该模式支持双极化 BS、单极化或双极化 UE、32 TXRU 的四种开环方案以及 `IDEAL` 接收机。
+11. Plan-037 第 13 节已交付独立的 CDL 波束平台：自适应正规 DFT 码本、固定两级 8-SSB/8-DFT 窄波束设计、解析长期功率选择、内容寻址缓存、逐波束 PDP、三类频域协方差、非正交波束域 CDD 归一化和本地方向图。该入口只做平台分析与 smoke，不运行 BLER。
 
 ### 2.1 当前平台支持范围与使用方法
 
@@ -37,6 +39,7 @@ python run.py --config <config.yaml>
 | `legacy_exponential` | 旧的离散指数 PDP | 不使用 3GPP profile | 通用 `run.py` |
 | `sionna_tdl` | 3GPP TR 38.901 TDL | `tdl_profile: A`～`E` | 通用 `run.py`；现有固定 TDL 实验入口 |
 | `sionna_cdl` | 3GPP TR 38.901 CDL | `cdl_profile: A`～`E` | 通用 `run.py` |
+| `fixed_cdl_statistics` | 固定长期统计的 3GPP TR 38.901 CDL | `cdl_profile: A`～`E` | 通用 `run.py` |
 
 现有 TDL YAML 不需要修改。一个最小 CDL 配置如下，完整可运行示例见 `configs/smoke_sionna_cdl.yaml`：
 
@@ -88,6 +91,128 @@ $$
 输出的 `resolved_config.yaml` 保存展开配置；`summary.csv`/`summary.json` 中保存 `channel_backend`、`channel_model`、`tdl_profile`、`cdl_profile`、`covariance_type` 等字段。CDL estimated-CSI 行的 `covariance_type` 会包含 `cdl_pdp_doppler_spatial_unaware`，用于防止把该接收机误认为空间统计完全匹配。
 
 本次扩展没有改变冻结的专题实验入口范围。`tools/run_bler_curves.py`、plan-031/032/033/034 与 PDCCH 专用入口仍按各自已有 schema 使用 TDL；需要在这些入口中开展 CDL 正式实验时，应分别扩展其 schema、固定物理范围和测试，不能只修改 YAML 字段。
+
+### 2.2 `fixed_cdl_statistics` 模式
+
+该模式的配置示例为：
+
+- `configs/smoke_fixed_cdl_statistics_32tx_2rx.yaml`：32T、双极化 2R；
+- `configs/smoke_fixed_cdl_statistics_32tx_4rx.yaml`：32T、双极化 4R。
+
+两份 smoke 配置均使用 4 GHz、CDL-C、300 ns delay spread。BS 物理阵列为 $(M,N,P)=(8,8,2)$，每极化 TXRU 网格为 $(M_p,N_p)=(2,8)$，因此共有 $2\times2\times8=32$ 个 TXRU。每个 TXRU 以等相位、单位范数权重映射到同一水平列内连续 4 个垂直 antenna elements（AE）；水平和垂直 AE 间距分别为 $0.5\lambda$ 和 $0.8\lambda$。2R 配置使用 $(1,1,2)$ UE 阵列，4R 配置使用 $(1,2,2)$ UE 阵列，UE 两个方向的元素间距均为 $0.5\lambda$。
+
+32T codebook 的当前确定性定义如下：
+
+- parent SSB：每极化 $2\times8$ TXRU 上的 8 个水平 DFT steering beams，空间频率中心均匀覆盖可见区间 $[-1,1]$；垂直两个 TXRU 使用同相权重；两极化等功率同相合成；
+- secondary beams：相同阵列上的 16 个二倍过采样水平 DFT steering beams；`secondary 2b` 和 `secondary 2b+1` 固定属于 parent SSB $b$；
+- 所有 codebook 列均为单位范数。该 codebook 是本平台当前的可复现 32T 定义，不宣称等同于某个 3GPP Type-I CSI codebook。
+
+初始化时固定 CDL profile 的路径时延、路径功率、ray angles、XPR、ray coupling、阵列和速度方向。可用 `mean_aod_deg` 对 AoD 做确定性圆周平移，并分别用 `aod_scale`、`aoa_scale`、`zod_scale` 和 `zoa_scale` 缩放相对各自均值的角度偏移。变换后的统计在整个运行中保持不变。若 `ue_speed_kmh>0`，同一 realization 的所有 OFDM symbols 通过固定 ray Doppler 连续演化。
+
+设频域 TXRU 信道为 $\mathbf H_d[k]$，统计阶段估计
+
+$$
+\widehat{\mathbf R}_t
+=
+\frac{1}{D S K}
+\sum_{d=1}^{D}\sum_{s=1}^{S}\sum_{k=1}^{K}
+\mathbf H_{d,s}^{H}[k]\mathbf H_{d,s}[k],
+$$
+
+其中 $D$ 为 `covariance_realizations`，$S$ 为时域 sample 数，$K$ 为活动子载波数。统计阶段使用 `statistics_seed`；正式链路 realization 使用不同的 `realization_seed`，配置校验禁止两者相等。对 parent codebook $\mathbf W_{\rm SSB}$，平台计算
+
+$$
+\overline P_b=\mathbf w_b^H\widehat{\mathbf R}_t\mathbf w_b,
+\qquad
+b^\star=\arg\max_b\overline P_b,
+\qquad
+P_{\rm ref}=\overline P_{b^\star}.
+$$
+
+$b^\star$ 在完整 Monte Carlo 运行中固定。横轴为 $\gamma_{\rm ref,dB}$ 时，四种方案共用
+
+$$
+N_0=P_{\rm ref}10^{-\gamma_{\rm ref,dB}/10}.
+$$
+
+`BASELINE`、`POLARIZATION_CYCLING`、`BEAM_CYCLING` 和 `BEAM_CDD` 的每个活动子载波均满足 $\|\mathbf w[k]\|_2^2=1$。`BEAM_CDD` 先合成两个 secondary branches，再只按预定频域权重做逐子载波功率归一化；该归一化不依赖 instantaneous channel。配置强制 `simulation.common_random_numbers: true`，所以同一 SNR、trial 下四种方案共享 channel realization index、transport block 和单位方差噪声样本。
+
+每次运行额外保存：
+
+- `fixed_cdl_statistics_0.json`：角度变换统计、固定 SSB、$P_{\rm ref}$、各 SSB 长期功率、阵列和种子；
+- `fixed_cdl_statistics_0.npz`：$\widehat{\mathbf R}_t$、parent/secondary codebook 和 SSB 长期功率；
+- `summary.csv`：`selected_ssb`、`reference_receive_power`、实际 `noise_var`、统计样本数及预编码归一化前功率范围；
+- `trial_metrics.csv`：共享 realization index、payload/noise seed 和预编码功率范围。
+
+2026-09-21 的功能性 smoke 使用 $D=2$ 和每方案 1 个 trial，只验证执行路径和不变量，不构成 BLER 统计结论。32T2R 与 32T4R 均成功运行；两者都选择 SSB 4。2R 的 $P_{\rm ref}=4.6923319982$，4R 的 $P_{\rm ref}=13.9945296666$；每个场景内四种方案的 `noise_var` 完全一致，逐子载波归一化后功率位于 $[1-3\times10^{-16},1+4\times10^{-16}]$。正式 BLER 或 AoD 鲁棒性比较必须另行制定 plan，并把 $D$、trial 数、SNR 网格和停止判据冻结后执行。
+
+### 2.3 Plan-037 第 13 节 CDL 波束平台
+
+该能力用于在不运行编码、译码或 BLER trial 的情况下，从固定 CDL profile、阵列和 TXRU 映射生成波束权值、PDP、频域协方差及可视化产物。稳定示例配置为 `configs/plan037_cdl_c_e_beam_platform.yaml`，调用方式为：
+
+```powershell
+python tools/run_plan037_cdl_platform.py --config configs/plan037_cdl_c_e_beam_platform.yaml --stage validate
+python tools/run_plan037_cdl_platform.py --config configs/plan037_cdl_c_e_beam_platform.yaml --stage run
+```
+
+默认输出到 `outputs/experiment037_cdl_platform/beam_patterns_e_c/`，其下按 `cdl_e/`、`cdl_c/` 分目录。可用 `--output <directory>` 覆盖输出根目录。调用方应先执行 `validate`，再执行 `run`；相同物理配置和算法版本会通过内容寻址 key 命中 `beam_design.cache_dir` 中的权值缓存。
+
+#### 2.3.1 可调用能力
+
+可复用原语位于 `cdd_lls/phy/cdl_beam_platform.py`：
+
+- `regular_dft_codebook()`：根据每极化有效垂直/水平 TXRU 数、极化数和过采样倍数生成单位范数正规 DFT 码本；
+- `partition_angular_region()`、`dft_steering_beams()`：生成两级角域网格及中心指向 DFT/steering 窄波束；
+- `synthesize_region_beam()`：在指定角域内通过确定性加权最小二乘合成单位范数宽波束；
+- `beam_path_statistics()`：从逐路径 TXRU 协方差计算逐波束路径功率和波束间联合统计；
+- `beam_domain_cdd_precoder()`：构造波束域 CDD；正交分支使用 $1/\sqrt{K_b}$，非正交分支使用逐子载波 $\alpha[k]$ 保证总发射功率为 1；
+- `covariance_common_reference_pdp()`、`covariance_beam_specific_independent()` 和 `covariance_beam_joint()`：分别构造公共参考 PDP、逐波束独立 PDP 和保留波束间相关项的频域协方差；
+- `write_cache()`、`validate_cache()`：保存并严格校验权值 shape、单位范数、数组 SHA-256、manifest SHA-256 和附属产物 hash。
+
+专题入口 `tools/run_plan037_cdl_platform.py` 把上述原语串成完整分析流程，包括 CDL ray 展开、解析发射协方差、最强波束选择、PDP 合并、协方差审计、合成 LS/LMMSE shape smoke 和本地绘图。
+
+#### 2.3.2 两级 SSB/DFT 配置
+
+当前第 13.3.2 节方法固定使用两级 8 波束：第一级覆盖 AoD $[-60^\circ,60^\circ]$、ZoD $[90^\circ,110^\circ]$，垂直 2 × 水平 4；按解析长期接收功率选择最强 SSB 后，在其 $30^\circ\times10^\circ$ 区域内再按垂直 2 × 水平 4 生成 8 个中心指向 DFT 窄波束。关键配置为：
+
+```yaml
+beam_design:
+  method: both
+  num_branches: 8
+  ssb_grid:
+    aod_range_deg: [-60.0, 60.0]
+    zod_range_deg: [90.0, 110.0]
+    vertical_beams: 2
+    horizontal_beams: 4
+  narrow_grid:
+    vertical_beams: 2
+    horizontal_beams: 4
+  weight_constraint: unit_norm
+  cache_dir: outputs/experiment037_cdl_platform/cache
+  cdd_delay_indices: [0, 1, 3, 7, 12, 20, 30, 65]
+
+visualization:
+  enabled: true
+  pattern_grid_size: 181
+
+platform_run:
+  profiles: [E, C]
+  output_dir: outputs/experiment037_cdl_platform/beam_patterns_e_c
+```
+
+AoD 使用 Sionna 全局坐标系方位角，ZoD 是从天顶向下量取的天顶角。波束顺序为垂直优先、同一垂直行内水平角递增；CDD delay 按此稳定顺序映射，不按窄波束后验功率重新排序。最强 SSB 只由 CDL profile 的解析长期统计选择，不读取待评估 trial 的瞬时信道。
+
+#### 2.3.3 输出与复用边界
+
+每个 profile 目录至少包含：
+
+- `resolved_config.yaml`、`run_report.json`、`geometry_profile_audit.json`：展开配置、所选 SSB、角域、码本 shape、归一化误差、缓存状态和几何审计；
+- `ray_table.csv`、`regular_dft_power.csv`、`ssb_codebook_power.csv`、`wide_split_power.csv`：原始 ray、正规 DFT、SSB 和窄波束长期功率；
+- `pdp_tables.csv`：共享物理时延参考下的原始、参考及逐波束 PDP；
+- `covariance_audit.json`、`covariance_audit_data.npz`：公共参考 PDP、逐波束独立 PDP 和完整联合统计三类频域协方差及 Hermitian/半正定审计；
+- `direction_pattern_data.npz` 及 PNG：可复现绘图输入和本地方向图、功率分布、ray 角度功率及 PDP 图。
+
+调用 estimated-CSI 接收机时必须显式选择协方差层级。公共 SSB PDP 只适合作为低复杂度基线；当前 8 个窄波束一般不正交，若需要 matched 上界，应使用 `beam_joint_covariance` 并保留实际逐子载波 $\alpha[k]$。该平台尚未把这些协方差接入通用 `run.py` 的完整二维时频 LMMSE/BLER 流程，也没有验证任何 CDD 性能增益；后续正式链路实验必须另立 plan 并冻结接收机、SNR、trial 和判据。
 
 ## 3. TDL 抽头与 PDP
 
@@ -426,7 +551,9 @@ $$
 3. PDSCH 不同入口的预编码数值尺度不同。比较噪声方差、信道估计 NMSE 或接收功率时，必须同时读取 $P_{\rm tx}$，不能只比较 `noise_variance`。
 4. 当前多 Rx 模型没有空间相关，也没有跨 Rx 联合信道估计。若未来加入相关矩阵，本文关于独立分支、CDF 集中程度和 MRC 增益的解释需要重检。
 5. 上一条只适用于 TDL。CDL 已通过 Tx/Rx `PanelArray` 几何引入空间相关，但接收端仍逐 Rx 估计后执行 MRC，且当前 TF-RMMSE 不使用空间协方差。
-6. CDL 当前仅支持 `single` polarization，类型为 `V` 或 `H`；尚未开放双极化端口映射、阵列朝向配置、路径损耗、阴影衰落和多链路拓扑。
+6. 普通 `sionna_cdl` 后端仍只支持 `single` polarization，类型为 `V` 或 `H`。`fixed_cdl_statistics` 后端独立支持双极化 BS、单/双极化 UE 和 AE-to-TXRU 映射，但尚未加入路径损耗、阴影衰落和多链路拓扑。
+7. 通用 `run.py` 的 `fixed_cdl_statistics` 链路当前仅支持下行、rank-1、MRC 和 `IDEAL` 接收机。Plan-037 第 13 节平台已经能离线构造公共 PDP、逐波束 PDP 和联合统计三类频域协方差，但尚未把它们接入通用链路的完整二维时频 LMMSE/BLER 流程，不能沿用普通 CDL 的 spatial-unaware 近似。
+8. 固定 ray coupling 的实现使用 Sionna 1.0.2 的 CDL 内部 CIR sampler。升级 Sionna 时必须运行 `tests/test_fixed_cdl_statistics.py` 和两份 32T smoke，重新核对张量轴顺序、双极化端口顺序及 seed replay。
 
 ## 9. 复查记录
 
@@ -434,3 +561,5 @@ $$
 |---|---|---|
 | 2026-09-16 | `83b25bc` | 首次检查并记录当前 PDCCH/PDSCH、多 Rx、TDL、SNR 和分集统计实现；补充 Doppler sinusoid 与天线对初相位的精确共享关系。 |
 | 2026-09-17 11:34:36 +08:00 | `83b25bc` + 工作区修改 | 通用 `run.py` 增加 Sionna CDL-A～E、单极化 ULA/URA、上下行方向、IDEAL 与 spatial-unaware TF-RMMSE；增加 CDL smoke 配置和回归测试。 |
+| 2026-09-22 | 当前工作区 | 增加 `fixed_cdl_statistics`、双极化 128 AE 到 32 TXRU 映射、固定 8/16 波束 codebook、长期协方差 Monte Carlo、固定 parent SSB、公共 $P_{\rm ref}$ SNR，以及 32T2R/32T4R 功能性 smoke。 |
+| 2026-09-24 | 当前工作区 | 完成 Plan-037 第 13 节 CDL 波束平台：自适应正规 DFT、两级 8-SSB/8-DFT、内容寻址缓存、逐波束 PDP、三类频域协方差、非正交波束域 CDD、合成 LS/LMMSE shape smoke 和 CDL-E/CDL-C 本地图表。 |
