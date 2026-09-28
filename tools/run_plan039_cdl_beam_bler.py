@@ -1,4 +1,4 @@
-"""Execute Plan-039 validation, selection prescan, and estimated-CSI confirmation."""
+"""Execute Plan-039 validation, selection, and frozen formal supplements."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import hashlib
 import json
 import math
 import sys
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,9 @@ STAGE1B_CDD_METHODS = (
     "PLAN039_COMMON_REFERENCE_PDP",
 )
 STAGE1B_CYCLING_METHOD = "PLAN039_PRG_COMMON_REFERENCE_PDP"
+TRANSPARENT_CDD_METHOD = "PLAN039_TRANSPARENT_COMMON_REFERENCE_PDP"
+AGED_MRT_SCHEME = "PLAN039_AGED_MRT_PRG6"
+AGED_MRT_METHOD = "PLAN039_PRG_COMMON_REFERENCE_PDP"
 SELECTION_GRID = tuple(float(value) for value in range(0, 22, 2))
 SELECTION_TRIALS = 400
 FORMAL_BATCH = 1000
@@ -990,6 +994,163 @@ def _stage1b_grid(raw: dict[str, Any], family: str) -> list[float]:
     return sorted({round(float(value), 8) for value in np.r_[coarse_grid, fine_grid]})
 
 
+def _aged_mrt_grid(raw: dict[str, Any]) -> list[float]:
+    stage = raw["plan039"]["aged_mrt"]
+    lower = float(stage["snr_min_db"])
+    upper = float(stage["snr_max_db"])
+    step = float(stage["snr_step_db"])
+    if not (lower == 7.5 and upper == 20.0 and step == 0.5):
+        raise ValueError("Plan-039 aged MRT formal grid is frozen to 7.5:0.5:20 dB.")
+    return [round(float(value), 8) for value in np.arange(lower, upper + step / 2.0, step)]
+
+
+def _prepare_aged_mrt_manifest(
+    raw: dict[str, Any],
+    root: Path,
+    speed_kmh: float,
+) -> tuple[Path, str, dict[str, Any]]:
+    source_path, _, source_manifest, source_arrays = _stage0_sources(root)
+    directory = root / "aged_mrt_60kmh" / "manifest"
+    manifest_path = directory / "plan039_manifest_60kmh.json"
+    if manifest_path.exists():
+        candidate = json.loads(manifest_path.read_text(encoding="utf-8"))
+        candidate_digest = str(candidate.get("manifest_sha256", ""))
+        candidate, _ = load_plan039_manifest(manifest_path, candidate_digest)
+        frozen = candidate.get("frozen_context", {})
+        if (
+            candidate.get("stage") == "supplement_aged_mrt_60kmh_40ms"
+            and candidate.get("source_manifest_sha256") == source_manifest["manifest_sha256"]
+            and float(frozen.get("ue_speed_kmh", -1.0)) == float(speed_kmh)
+        ):
+            return manifest_path, candidate_digest, candidate
+    config_payload = _scenario_payload(raw, 25.0, selection_only=True)
+    config_payload["channel"]["ue_speed_kmh"] = float(speed_kmh)
+    cfg = config_from_dict(config_payload)
+    grid = build_resource_grid(cfg.resource)
+    time_covariance = cdl_spatial_unaware_covariance(grid, cfg.channel).time
+    directory.mkdir(parents=True, exist_ok=True)
+    arrays_path = directory / "plan039_numeric_60kmh.npz"
+    arrays = dict(source_arrays)
+    arrays["time_covariance"] = time_covariance
+    np.savez_compressed(arrays_path, **arrays)
+    manifest = copy.deepcopy(source_manifest)
+    manifest.update({
+        "stage": "supplement_aged_mrt_60kmh_40ms",
+        "source_manifest": source_path.resolve().as_posix(),
+        "source_manifest_sha256": str(source_manifest["manifest_sha256"]),
+        "arrays_file": arrays_path.name,
+        "arrays_sha256": _sha256(arrays_path),
+    })
+    manifest["frozen_context"] = dict(manifest["frozen_context"])
+    manifest["frozen_context"]["ue_speed_kmh"] = float(speed_kmh)
+    manifest["reference_pdp"] = dict(manifest["reference_pdp"])
+    manifest["reference_pdp"].update({
+        "time_covariance_real": time_covariance.real.tolist(),
+        "time_covariance_imag": time_covariance.imag.tolist(),
+    })
+    digest = write_manifest(manifest_path, manifest)
+    return manifest_path, digest, manifest
+
+
+def run_aged_mrt_formal(raw: dict[str, Any], root: Path) -> dict[str, Any]:
+    stage = raw["plan039"]["aged_mrt"]
+    speed_kmh = float(stage["speed_kmh"])
+    age_ms = float(stage["csi_age_ms"])
+    trials = int(stage["trials_per_snr"])
+    max_workers = int(stage.get("max_parallel_snr", 1))
+    if speed_kmh != 60.0 or age_ms != 40.0:
+        raise ValueError("Plan-039 aged MRT supplement is frozen to 60 km/h and 40 ms CSI age.")
+    if trials != FORMAL_BATCH or bool(stage.get("prescan", False)):
+        raise ValueError("Plan-039 aged MRT runs no prescan and exactly 1,000 formal trials per SNR.")
+    if max_workers < 1 or max_workers > 3:
+        raise ValueError("Plan-039 aged MRT max_parallel_snr must be in [1,3].")
+    grid = _aged_mrt_grid(raw)
+    manifest_path, manifest_digest, manifest = _prepare_aged_mrt_manifest(raw, root, speed_kmh)
+    base_seed = int(raw["simulation"]["seed"])
+    evaluation_seed = _stable_seed(base_seed, "aged_mrt_60kmh_40ms_evaluation")
+    channel_seed = _stable_seed(base_seed, "aged_mrt_60kmh_40ms_channel")
+    template = _stage_base(raw, manifest_path.resolve(), manifest_digest, evaluation_seed, channel_seed)
+    template["channel"]["ue_speed_kmh"] = speed_kmh
+    variant_id = "aged_mrt_prg6__60kmh__csi_age40ms"
+    template["variants"] = [{
+        "variant_id": variant_id,
+        "transmission": {"tx_scheme": AGED_MRT_SCHEME, "aged_csi_ms": age_ms},
+        "channel_estimation": {"ce_method": AGED_MRT_METHOD},
+    }]
+    grid_digest = hashlib.sha256(
+        json.dumps(grid, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    output = root / "aged_mrt_60kmh" / SCENARIO
+    freeze = {
+        "schema": "plan039-aged-mrt-formal-freeze-v1",
+        "status": "FROZEN",
+        "speed_kmh": speed_kmh,
+        "csi_age_ms": age_ms,
+        "csi_time_reference": "old=-40ms,current_slot_start=0ms",
+        "mrt_definition": "dominant eigenvector of two-Rx PRG-summed Gram matrix",
+        "prg_size_rb": 6,
+        "receiver": AGED_MRT_METHOD,
+        "prescan_run": False,
+        "adaptive_additions": False,
+        "snr_grid_db": grid,
+        "snr_grid_sha256": grid_digest,
+        "trials_per_snr": trials,
+        "max_parallel_snr": max_workers,
+        "variant_id": variant_id,
+        "evaluation_seed": evaluation_seed,
+        "channel_seed": channel_seed,
+        "manifest": manifest_path.resolve().as_posix(),
+        "manifest_sha256": manifest_digest,
+        "source_manifest_sha256": manifest["source_manifest_sha256"],
+    }
+    _json(output / "aged_mrt_formal_freeze.json", freeze)
+    tasks: list[tuple[dict[str, Any], Path, Path]] = []
+    for snr in grid:
+        point_config = copy.deepcopy(template)
+        snr_tag = f"{snr:.1f}".replace(".", "p")
+        run_id = f"aged_mrt_60kmh_csi40ms_snr{snr_tag}_t1_1000"
+        point_config["simulation"].update({
+            "snr_points_db": [snr],
+            "n_trials_per_snr": trials,
+            "max_trials_per_snr": trials,
+            "absolute_trial_start": 0,
+            "output_dir": (root / "aged_mrt_60kmh" / "batches").as_posix(),
+            "run_id": run_id,
+        })
+        tasks.append((
+            point_config,
+            root / "configs" / f"{run_id}.yaml",
+            root / "aged_mrt_60kmh" / "batches" / run_id,
+        ))
+    batch_dirs: list[Path] = []
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_run_batch, config, config_path, directory): directory
+            for config, config_path, directory in tasks
+        }
+        for future in as_completed(futures):
+            batch_dirs.append(future.result())
+    summary = _merge_summary(batch_dirs)
+    _write_csv(output / "aged_mrt_formal_summary.csv", summary)
+    _merge_trial_files(batch_dirs, output / "aged_mrt_formal_trial_metrics.csv", {variant_id})
+    if len(summary) != len(grid) or any(int(row["n_trials"]) != trials for row in summary):
+        raise RuntimeError("Plan-039 aged MRT formal output coverage is incomplete.")
+    report = {
+        "schema": "plan039-aged-mrt-formal-report-v1",
+        "status": "COMPLETE",
+        "prescan_run": False,
+        "adaptive_additions": False,
+        "variant_id": variant_id,
+        "snr_grid_db": grid,
+        "trials_per_snr": trials,
+        "freeze_sha256": _sha256(output / "aged_mrt_formal_freeze.json"),
+        "summary_sha256": _sha256(output / "aged_mrt_formal_summary.csv"),
+        "trial_metrics_sha256": _sha256(output / "aged_mrt_formal_trial_metrics.csv"),
+    }
+    _json(output / "aged_mrt_formal_report.json", report)
+    return report
+
+
 def _run_estimated_family(
     raw: dict[str, Any],
     root: Path,
@@ -1061,6 +1222,120 @@ def _completed_batch_covers(
         and int(row["n_trials"]) == int(count)
     }
     return required <= covered
+
+
+def _completed_method1_sidon_intervals(root: Path) -> dict[tuple[int, int], list[float]]:
+    """Return completed formal Sidon method-1 intervals grouped by absolute trial range."""
+    variant_id = "sidon_selected__plan039_common_reference_pdp"
+    batches = root / "estimated_confirm" / "batches"
+    grouped: dict[tuple[int, int], set[float]] = {}
+    if not batches.exists():
+        raise FileNotFoundError("Run the Sidon method-1 formal scan before the transparent supplement.")
+    for directory in sorted(path for path in batches.iterdir() if path.is_dir()):
+        summary_path = directory / "summary.csv"
+        receipt_path = directory / "batch_receipt.json"
+        trial_path = directory / "trial_metrics.csv"
+        if not (summary_path.exists() and receipt_path.exists() and trial_path.exists()):
+            continue
+        for row in _read_csv(summary_path):
+            if str(row["variant_id"]) != variant_id:
+                continue
+            start = int(row["absolute_trial_start"])
+            stop = int(row.get("absolute_trial_stop", start + int(row["n_trials"])))
+            if stop - start != int(row["n_trials"]) or start < 0 or stop <= start:
+                raise RuntimeError(f"Invalid method-1 interval in {summary_path}: {row}.")
+            grouped.setdefault((start, stop), set()).add(float(row["snr_db"]))
+    if not grouped:
+        raise FileNotFoundError("No completed Sidon method-1 formal batches with receipts were found.")
+    return {interval: sorted(points) for interval, points in sorted(grouped.items())}
+
+
+def run_transparent_sidon_formal(raw: dict[str, Any], root: Path) -> dict[str, Any]:
+    """Run transparent estimated-CSI Sidon on exactly the completed method-1 coverage."""
+    freeze_path = root / "selection" / SCENARIO / "selection_freeze.json"
+    if not freeze_path.exists():
+        raise FileNotFoundError("Run --stage select before --stage transparent_sidon_formal.")
+    selection = json.loads(freeze_path.read_text(encoding="utf-8"))
+    if selection.get("status") != "FROZEN":
+        raise RuntimeError("Stage 1A selection freeze is not valid.")
+    intervals = _completed_method1_sidon_intervals(root)
+    base_manifest, _, base_payload, _ = _stage0_sources(root)
+    seeds = selection["seeds"]
+    template = _stage_base(raw, base_manifest.resolve(), str(base_payload["manifest_sha256"]),
+                           int(seeds["evaluation"]), int(seeds["evaluation_channel"]))
+    selected = selection["selected"]
+    variant_id = "sidon_selected__plan039_transparent_common_reference_pdp"
+    variant = {
+        "variant_id": variant_id,
+        "transmission": {"tx_scheme": "BEAM8_SIDON_SELECTED"},
+        "channel_estimation": {"ce_method": TRANSPARENT_CDD_METHOD},
+        "fixed_cdl_statistics": {
+            "frozen_beam_manifest": selected["manifest"],
+            "frozen_beam_manifest_sha256": selected["manifest_sha256"],
+        },
+    }
+    output = root / "transparent_sidon_formal" / SCENARIO
+    coverage = [
+        {"absolute_trial_start": start, "absolute_trial_stop": stop,
+         "trials": stop - start, "snr_points_db": points}
+        for (start, stop), points in intervals.items()
+    ]
+    scope = {
+        "schema": "plan039-transparent-sidon-formal-freeze-v1",
+        "status": "FROZEN",
+        "selection_freeze_sha256": _sha256(freeze_path),
+        "source": "completed Sidon method-1 batches with batch receipts",
+        "scheme": "BEAM8_SIDON_SELECTED",
+        "method": TRANSPARENT_CDD_METHOD,
+        "variant_id": variant_id,
+        "coverage": coverage,
+        "seeds": seeds,
+    }
+    _json(output / "transparent_sidon_formal_freeze.json", scope)
+    batch_dirs: list[Path] = []
+    for (start, stop), points in intervals.items():
+        count = stop - start
+        config = copy.deepcopy(template)
+        config["variants"] = [variant]
+        points_digest = hashlib.sha256(
+            json.dumps(points, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:8]
+        run_id = f"transparent_sidon_t{start+1}_{stop}_p{points_digest}"
+        config["simulation"].update({
+            "snr_points_db": points,
+            "n_trials_per_snr": count,
+            "max_trials_per_snr": count,
+            "absolute_trial_start": start,
+            "output_dir": (root / "transparent_sidon_formal" / "batches").as_posix(),
+            "run_id": run_id,
+        })
+        directory = root / "transparent_sidon_formal" / "batches" / run_id
+        batch_dirs.append(_run_batch(
+            config, root / "configs" / f"stage1b_{run_id}.yaml", directory
+        ))
+    summary = _merge_summary(batch_dirs)
+    _write_csv(output / "transparent_sidon_summary.csv", summary)
+    _merge_trial_files(batch_dirs, output / "transparent_sidon_trial_metrics.csv", {variant_id})
+    expected_trials = {snr: 0 for points in intervals.values() for snr in points}
+    for (start, stop), points in intervals.items():
+        for snr in points:
+            expected_trials[snr] += stop - start
+    actual_trials = {float(row["snr_db"]): int(row["n_trials"]) for row in summary}
+    if actual_trials != expected_trials:
+        raise RuntimeError(
+            f"Transparent Sidon coverage differs from method 1: {actual_trials} != {expected_trials}."
+        )
+    report = {
+        "schema": "plan039-transparent-sidon-formal-report-v1",
+        "status": "COMPLETE",
+        "variant_id": variant_id,
+        "coverage": coverage,
+        "freeze_sha256": _sha256(output / "transparent_sidon_formal_freeze.json"),
+        "summary_sha256": _sha256(output / "transparent_sidon_summary.csv"),
+        "trial_metrics_sha256": _sha256(output / "transparent_sidon_trial_metrics.csv"),
+    }
+    _json(output / "transparent_sidon_formal_report.json", report)
+    return report
 
 
 def _bootstrap_gains(batch_dirs: list[Path], seed: int, repeats: int = 1000) -> dict[str, Any]:
@@ -1215,7 +1490,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--stage", choices=(
-        "validate", "smoke", "audit", "select", "estimated_confirm", "cycling_initial"
+        "validate", "smoke", "audit", "select", "estimated_confirm", "cycling_initial",
+        "aged_mrt_formal", "transparent_sidon_formal",
     ), required=True)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
@@ -1243,8 +1519,14 @@ def main() -> None:
     elif args.stage == "estimated_confirm":
         report = run_estimated_confirm(raw, root)
         print(json.dumps(report, ensure_ascii=False, indent=2))
-    else:
+    elif args.stage == "cycling_initial":
         report = run_cycling_initial(raw, root)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    elif args.stage == "aged_mrt_formal":
+        report = run_aged_mrt_formal(raw, root)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        report = run_transparent_sidon_formal(raw, root)
         print(json.dumps(report, ensure_ascii=False, indent=2))
 
 

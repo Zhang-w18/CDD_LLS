@@ -56,6 +56,12 @@ SCHEMA = "plan032-tdl-mobility-v1"
 SCENARIO = "A100_V60"
 PRG_CANDIDATE = "A100_PRG_DFT8_6RB"
 MRT_CANDIDATE = "A100_AGED_CSI_MRT_PRG6_SLOTS10"
+ORIGINAL_CURVE_SET = "original"
+TRANSPARENT_CDD_SUPPLEMENT = "transparent_cdd_supplement"
+TRANSPARENT_CDD_SOURCES = ("A100_S0_SIDON", "A100_B0_QC")
+TRANSPARENT_CDD_IDS = {
+    source_id: f"{source_id}_TRANSPARENT_CDD" for source_id in TRANSPARENT_CDD_SOURCES
+}
 
 
 def _sha256(path: Path) -> str:
@@ -126,6 +132,7 @@ def load_config(path: Path) -> dict:
     config["feedback_period_slots"] = int(config.get("feedback_period_slots", 10))
     config["history_symbol_index"] = int(config.get("history_symbol_index", 140))
     config["run_kind"] = str(config["run_kind"])
+    config["curve_set"] = str(config.get("curve_set", ORIGINAL_CURVE_SET))
     return config
 
 
@@ -151,11 +158,35 @@ def _load_source_manifest(config: dict) -> tuple[dict, str]:
     return json.loads(path.read_text(encoding="utf-8")), digest
 
 
-def _candidate_definitions(manifest: dict) -> list[dict]:
+def _candidate_definitions(
+    manifest: dict, curve_set: str = ORIGINAL_CURVE_SET
+) -> list[dict]:
     rows = bler027.scenario_candidates(manifest, "A100")
     if len(rows) != 10:
         raise RuntimeError("Plan-032 requires the ten A100 source CDD candidates.")
     rows = [dict(row) for row in rows]
+    if curve_set == TRANSPARENT_CDD_SUPPLEMENT:
+        by_id = {str(row["candidate_id"]): row for row in rows}
+        missing = [
+            source_id for source_id in TRANSPARENT_CDD_SOURCES if source_id not in by_id
+        ]
+        if missing:
+            raise RuntimeError(f"Missing transparent CDD source candidates: {missing}")
+        return [
+            {
+                "candidate_id": TRANSPARENT_CDD_IDS[source_id],
+                "source_candidate_id": source_id,
+                "family": "TRANSPARENT_CDD_PHYSCOV",
+                "label": f"{source_id.removeprefix('A100_')}, transparent receiver",
+                "receiver_knowledge": "speed and physical TDL covariance; no CDD delays",
+            }
+            for source_id in TRANSPARENT_CDD_SOURCES
+        ]
+    if curve_set != ORIGINAL_CURVE_SET:
+        raise ValueError(
+            f"curve_set must be {ORIGINAL_CURVE_SET!r} or "
+            f"{TRANSPARENT_CDD_SUPPLEMENT!r}"
+        )
     rows.append(
         {
             "candidate_id": PRG_CANDIDATE,
@@ -221,7 +252,12 @@ def build_aged_mrt_prg_precoder(old_channel: np.ndarray, prg_size_rb: int = 6) -
     return weights
 
 
-def _effective_channels(realization_h: np.ndarray, grid, precoders: dict[str, object]):
+def _effective_channels(
+    realization_h: np.ndarray,
+    grid,
+    precoders: dict[str, object],
+    candidates: Sequence[dict] | None = None,
+):
     old = realization_h[:, :, :, 0, :]
     current = realization_h[:, :, :, 1:, :]
     output = {
@@ -235,12 +271,31 @@ def _effective_channels(realization_h: np.ndarray, grid, precoders: dict[str, ob
     output[PRG_CANDIDATE] = equivalent_channel(current, cycling)
     aged_mrt = build_aged_mrt_prg_precoder(old, prg_size_rb=6)
     output[MRT_CANDIDATE] = equivalent_channel(current, aged_mrt)
+    if candidates is not None:
+        for row in candidates:
+            source_id = row.get("source_candidate_id")
+            if source_id is not None:
+                output[str(row["candidate_id"])] = output[str(source_id)]
     return old, current, output, aged_mrt
 
 
-def _build_filters(grid, base, precoders: dict[str, object], noise_variance: float):
+def _build_filters(
+    grid,
+    base,
+    precoders: dict[str, object],
+    noise_variance: float,
+    candidates: Sequence[dict] | None = None,
+):
     filters = {}
-    for candidate_id, precoder in precoders.items():
+    requested = (
+        [str(row["candidate_id"]) for row in candidates]
+        if candidates is not None
+        else [*precoders, PRG_CANDIDATE, MRT_CANDIDATE]
+    )
+    for candidate_id in requested:
+        if candidate_id not in precoders:
+            continue
+        precoder = precoders[candidate_id]
         covariance = TDLTimeFrequencyCovariance(
             time=base.time,
             frequency=base.frequency * (precoder.C @ precoder.C.conj().T),
@@ -254,15 +309,38 @@ def _build_filters(grid, base, precoders: dict[str, object], noise_variance: flo
         frequency=8.0 * base.frequency,
         covariance_type="transparent_8x_physical",
     )
-    shared = build_prg_time_frequency_rmmse_filter(
-        grid,
-        transparent_covariance,
-        prg_size_subcarriers=72,
-        noise_variance=noise_variance,
-        diagonal_loading=1e-10,
-    )
-    filters[PRG_CANDIDATE] = shared
-    filters[MRT_CANDIDATE] = shared
+    transparent_cdd_ids = [
+        str(row["candidate_id"])
+        for row in (candidates or [])
+        if str(row.get("family")) == "TRANSPARENT_CDD_PHYSCOV"
+    ]
+    if transparent_cdd_ids:
+        shared_cdd = build_time_frequency_rmmse_filter(
+            grid,
+            transparent_covariance,
+            noise_variance,
+            diagonal_loading=1e-10,
+        )
+        filters.update(
+            {candidate_id: shared_cdd for candidate_id in transparent_cdd_ids}
+        )
+    prg_ids = [
+        candidate_id
+        for candidate_id in (PRG_CANDIDATE, MRT_CANDIDATE)
+        if candidate_id in requested
+    ]
+    if prg_ids:
+        shared_prg = build_prg_time_frequency_rmmse_filter(
+            grid,
+            transparent_covariance,
+            prg_size_subcarriers=72,
+            noise_variance=noise_variance,
+            diagonal_loading=1e-10,
+        )
+        filters.update({candidate_id: shared_prg for candidate_id in prg_ids})
+    if set(filters) != set(requested):
+        missing = sorted(set(requested) - set(filters))
+        raise RuntimeError(f"Missing receiver filters: {missing}")
     return filters
 
 
@@ -289,7 +367,7 @@ def validate_config(config: dict) -> tuple[dict, str, list[dict]]:
     manifest, digest = _load_source_manifest(config)
     if int(manifest["dmrs_spacing_subcarriers"]) != 6:
         raise RuntimeError("Plan-032 requires comb-6 source candidates")
-    candidates = _candidate_definitions(manifest)
+    candidates = _candidate_definitions(manifest, config["curve_set"])
     channel, grid, precoders, base = _build_scene(manifest, config["speed_kmh"])
     if grid.n_dmrs_re != 192 or list(np.unique(grid.pilot_symbol_indices)) != [2, 7]:
         raise RuntimeError("Plan-032 requires two DMRS symbols [2,7] and 192 pilot REs")
@@ -300,7 +378,8 @@ def validate_config(config: dict) -> tuple[dict, str, list[dict]]:
         if not np.allclose(power, 8.0, atol=1e-12):
             raise RuntimeError(f"Precoder power changed for {candidate_id}")
     print(
-        f"[validate] {SCENARIO}: curves={len(candidates)} speed=60 km/h "
+        f"[validate] {SCENARIO}: curve_set={config['curve_set']} "
+        f"curves={len(candidates)} speed=60 km/h "
         f"dmrs_symbols=[2,7] pilot_re={grid.n_dmrs_re}",
         flush=True,
     )
@@ -315,6 +394,7 @@ def _write_resolved(config: dict, manifest_sha256: str, candidates: Sequence[dic
         "schema": SCHEMA,
         "plan": "research/plan-032-PDSCH-A100-60kmh.md",
         "run_kind": config["run_kind"],
+        "curve_set": config["curve_set"],
         "config_path": _repo_relative(Path(config["config_path"])),
         "config_sha256": _sha256(Path(config["config_path"])),
         "source_manifest_sha256": manifest_sha256,
@@ -336,7 +416,8 @@ def _write_resolved(config: dict, manifest_sha256: str, candidates: Sequence[dic
         "receiver": {
             "type": "two-DMRS joint 2D time-frequency RMMSE",
             "knows_speed": True,
-            "cdd_knows_precoder": True,
+            "cdd_knows_precoder": config["curve_set"] == ORIGINAL_CURVE_SET,
+            "transparent_cdd_knows_precoder": False,
             "transparent_prg_knows_precoder": False,
             "aged_mrt_knows_precoder": False,
             "per_ls_observation_noise_variance": "8/SNR_linear",
@@ -448,7 +529,7 @@ def run(config: dict, manifest: dict, digest: str, candidates: Sequence[dict]) -
         if trial_count % config["batch_size"]:
             raise RuntimeError("Pending trial interval must align to batch_size")
         noise_variance = 8.0 / (10.0 ** (snr_db / 10.0))
-        filters = _build_filters(grid, base, precoders, noise_variance)
+        filters = _build_filters(grid, base, precoders, noise_variance, candidates)
         diagnostic = {
             candidate_id: {
                 "condition_number": float(filters[candidate_id].condition_number),
@@ -489,7 +570,7 @@ def run(config: dict, manifest: dict, digest: str, candidates: Sequence[dict]) -
                 time_sample_indices=requested_times,
             )
             old, current, effective, aged_mrt = _effective_channels(
-                realization.H, grid, precoders
+                realization.H, grid, precoders, candidates
             )
             if not np.allclose(np.sum(np.abs(aged_mrt) ** 2, axis=2), 8.0, atol=1e-10):
                 raise RuntimeError("Aged MRT power normalization changed")

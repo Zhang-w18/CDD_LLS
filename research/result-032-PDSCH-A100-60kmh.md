@@ -10,6 +10,7 @@
 - `B0_QC`、`AP_TEPS_T1` 在 10% BLER 分别节省 0.240/0.276 dB，在 1% BLER 分别节省 1.202/1.224 dB，区间也均完全位于增益侧。
 - `AP_TALIAS_NT` 在 10% BLER 节省 0.091 dB，95%区间为 `[-0.134,-0.032] dB`；增加样本后区间不再跨零，因此当前证据支持小幅但确定的增益。在 1% BLER 节省 1.000 dB。
 - `AP_TU_NTM1` 在 10% BLER 明确比 transparent PRG6 差 0.116 dB，95%区间 `[+0.065,+0.175] dB`；但在 1% BLER 又节省 0.636 dB。这说明“移动性下仍有增益”必须按设计和目标 BLER 分开陈述。
+- 补充的 `S0_SIDON` 与 `B0_QC` 频域透明接收机曲线在 14–20 dB 均为 BLER=1。对应 CE NMSE 分别停在约 −2.8 dB 和 −1.0 dB，说明底层 PDP 的全带宽二维 RMMSE 无法在不知道大时延 CDD 的条件下恢复等效频率响应；这两条负结果不改变原非透明 CDD 的比较结论。
 - 上述 6 个可闭合 CDD 在 10%/1% BLER 均优于约 4.995 ms 过时 CSI 的未量化 PRG-MRT：分别节省 0.666–1.387 dB 和 2.200–2.967 dB。该闭环曲线是透明接收机、精确 MRT、无代码本量化的上界型算法基线，不是标准 PMI 性能。
 - `AP_TU_NT`、`AP_T2_01`、`MEFF_T2_04`、`MEFF_T2_06` 到 24 dB 仍有 1.000、0.986、0.991、0.425 BLER，10%/1%目标均未闭合，因此不外推目标 SNR。
 
@@ -34,6 +35,7 @@
 透明/非透明只由接收机是否知道预编码区分：
 
 - 10 条 CDD 曲线使用知道各自 CDD `V` 的非透明匹配接收机，频域协方差为 `R_phy ⊙ (V V^H)`；
+- 两张筛选图另补充 `S0_SIDON` 与 `B0_QC` 的透明接收机曲线；发射端仍使用同名 CDD `V`，但接收机不知道 CDD 时延并在全带宽统一使用 `8 R_phy`；这两条补充曲线不进入本节既有目标 SNR 表和比较结论；
 - `transparent PRG6` 不知道预编码，只在每个 6-RB PRG 内使用 `8 R_phy` 做二维估计；
 - `aged-CSI MRT PRG6` 的接收机同样透明并使用 `8 R_phy`。发射端在同一连续 TDL realization 中取 140 个 OFDM symbols 之前的 `H`，每个 6-RB PRG 以 `Σ H_old^H H_old` 的主特征向量构造范数平方为 8 的精确 MRT，并在当前 10 个 symbols 内保持不变。实际 CSI age 为 4.994792 ms。
 
@@ -67,11 +69,24 @@
 
 ![A100 60 km/h estimated-CSI BLER](../docs/figures/result-032/a100_v60_estimated_csi_bler.png)
 
-下列两张筛选图使用同一份 estimated-CSI BLER 原始数据和相同坐标范围。第一张保留 `S0_SIDON`、transparent PRG6 与 aged-CSI MRT PRG6；第二张将 `S0_SIDON` 替换为 `B0_QC`。为面向方案类别展示，三条曲线依次标为 `Non-transparent CDD`、`Precoder cycling` 和 `Closed-loop MRT`。
+下列两张筛选图使用相同坐标范围。第一张保留 `S0_SIDON` 的非透明与透明接收机曲线、transparent PRG6 和 aged-CSI MRT PRG6；第二张将两条 `S0_SIDON` 曲线替换为对应的 `B0_QC` 曲线。四条曲线依次标为 `Non-transparent CDD`、`Transparent CDD`、`Precoder cycling` 和 `Closed-loop MRT`。前三条既有曲线读取 `outputs/experiment032_tdl_mobility/20260906_main/final/estimated_csi_bler_points.csv`，透明 CDD 补充曲线读取 `outputs/experiment032_tdl_mobility/20260906_main/transparent_cdd_supplement/final/estimated_csi_bler_points.csv`。
 
 ![A100 60 km/h SIDON selected estimated-CSI BLER](../docs/figures/result-032/a100_v60_estimated_csi_bler_sidon_comparison.png)
 
 ![A100 60 km/h B0QC selected estimated-CSI BLER](../docs/figures/result-032/a100_v60_estimated_csi_bler_b0qc_comparison.png)
+
+### 3.1 频域透明 CDD 的 CE NMSE
+
+| 曲线 | 14–20 dB CE NMSE 范围 (dB) | 20 dB 线性 NMSE | TB errors/trials |
+|---|---:|---:|---:|
+| B0QC, transparent | −0.992 至 −0.927 | 0.795927 | 547720/547720 |
+| S0 Sidon, transparent | −2.863 至 −2.787 | 0.517675 | 547720/547720 |
+
+![A100 60 km/h transparent CDD CE NMSE](../docs/figures/result-032/a100_v60_ce_nmse_transparent_cdd_comparison.png)
+
+事实：两条透明 CDD 的 NMSE 随 SNR 从 14 dB 增至 20 dB 几乎不下降，而同一数据中的非透明匹配 B0QC/S0 Sidon 在 20 dB 分别为 −22.162/−23.329 dB。补充曲线使用已知 60 km/h 多普勒的时域协方差，因此没有关闭时域滤波；其频域假设固定为底层 TDL-A PDP 的全带宽 `8 R_phy`，不含 CDD 时延。result-028 静态透明 CDD 在共同 14–16 dB 点也全部为 BLER=1，移动与静态 NMSE 的最大绝对差仅为 B0QC 0.020 dB、S0 Sidon 0.049 dB。
+
+由上述事实推断，BLER=1 的主因是大时延 CDD 将等效频率协方差改变为 `R_phy ⊙ (V V^H)` 后，透明接收机仍强制使用底层 PDP 协方差所产生的严重模型失配；60 km/h 时域变化不是该失配地板的主因。该推断只适用于本轮全带宽透明 RMMSE 定义，不能外推为所有未知预编码接收机必然失败。
 
 ![A100 60 km/h channel-estimation NMSE](../docs/figures/result-032/a100_v60_ce_nmse.png)
 
@@ -107,9 +122,12 @@ BLER 图只展示 14–20 dB、BLER 不低于 0.5%的区域，点线标出 1%目
 - `.../final/channel_correlation_summary.json`：Doppler、CSI age、理论/经验时间相关；
 - `.../final/curve_styles.json`：两张图共享样式；
 - `outputs/experiment032_tdl_mobility/20260906_main/{formal,formal_shard1,formal_shard2,formal_shard3}/`：展开配置、SHA-256、逐区间 CSV、逐 trial error flags、CE 数组和滤波器诊断。
+- `outputs/experiment032_tdl_mobility/20260906_main/transparent_cdd_supplement/`：`S0_SIDON` 与 `B0_QC` 的透明接收机补充曲线、展开配置、逐区间 CSV、逐 trial error flags、CE 数组、滤波器诊断及 NMSE 图副本；
 - `outputs/experiment032_tdl_mobility/20260906_main/result028_scale_orchestration/`：单命令编排状态、四分片完整日志和最终 `547,720/547,720` 预算闭合记录。
 
 源候选由 `outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json`、对应 `.sha256` 与 `source_approval.json` 冻结。代码内容事实源为 Git base `83b25bc2ea77324ae98f7dc67136fc1e93b1f32c` 加当前未提交任务改动；关键文件 SHA-256 为：runner `4401282E8FDEE36ECA39C668AEDD9F78B7ACF68052557911D0BB2F7D2B4C4975`，orchestrator `4F193A473BD59891EF79A80B02668E3A85601C0C657AA2344A7191B970AE3823`，analyzer `5E6DE7EBBC9E6C0581B80DAABC32A4AAF3000BCDA8F842FA97447C684EB8A1E1`，`channel_tdl.py` `E67A9B71314D002B5DCE3186DF09C7975459852F4EFFE94A7FE911C7C543FE73`，`estimators.py` `71AFF1138F42BCC5BB30E535930C946884ACDAB06F55C5D48C013B3151E7104B`。
+
+透明 CDD 补充运行的展开配置记录在 `transparent_cdd_supplement/resolved_run.json`，配置 SHA-256 为 `3E2729D8DB3B1467073B03D0D2C53E7CB2F06DC23BCAEADF2B96A980CAAA2814`；补充版 runner SHA-256 为 `48D84CEC6AEFC4EA8E54411A82C50959B04ACAB2614531D93C0C7144E4D392C7`，绘图脚本 SHA-256 为 `EDF4AA78130EE3E94ADA81C21CF552D1F04A5CC2C20BF62D74F143DA3C42EEA4`。原正式运行的 runner hash 保留在上一段，二者不混用。
 
 复现入口：
 
@@ -119,6 +137,8 @@ BLER 图只展示 14–20 dB、BLER 不低于 0.5%的区域，点线标出 1%目
 # 正式公共网格、分片及自适应追加配置的精确执行顺序见 research/plan-032-PDSCH-A100-60kmh.md 第 9 节。
 & D:\venvs\cdd-s102\Scripts\python.exe tools\run_result032_result028_scale.py
 & D:\venvs\cdd-s102\Scripts\python.exe tools\analyze_result032_tdl_mobility.py --skip-ce-plot
+& D:\venvs\cdd-s102\Scripts\python.exe tools\run_plan032_tdl_mobility.py --config configs\bler_curves_result032_a100_60kmh_transparent_cdd_supplement.yaml --stage validate
+& D:\venvs\cdd-s102\Scripts\python.exe tools\run_plan032_tdl_mobility.py --config configs\bler_curves_result032_a100_60kmh_transparent_cdd_supplement.yaml --stage run
 & D:\venvs\cdd-s102\Scripts\python.exe tools\plot_result032_selected_bler.py --copy-to-final
 ```
 

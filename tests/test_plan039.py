@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from cdd_lls.core.config import PlatformConfig
+from cdd_lls.core.config import PlatformConfig, config_from_dict, dataclass_to_dict, load_config
 from cdd_lls.phy.cdl_beam_platform import beam_domain_cdd_precoder
 from cdd_lls.phy.plan039 import (
     CE_METHODS,
@@ -15,10 +17,15 @@ from cdd_lls.phy.plan039 import (
 from cdd_lls.sim.orchestrator import CDDLinkLevelOrchestrator
 from tools.run_plan039_cdl_beam_bler import (
     _adaptive_points,
+    _aged_mrt_grid,
+    _completed_method1_sidon_intervals,
     _completed_batch_covers,
     _evaluation_variants,
     _stage1b_grid,
 )
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _nonorthogonal_beams() -> np.ndarray:
@@ -136,6 +143,31 @@ def test_stage1b_uses_family_specific_refinement_windows() -> None:
     assert 19.75 in cycling and 19.75 not in cdd
 
 
+def test_aged_mrt_formal_grid_and_config_are_frozen() -> None:
+    raw = {"plan039": {"aged_mrt": {
+        "snr_min_db": 7.5,
+        "snr_max_db": 20.0,
+        "snr_step_db": 0.5,
+    }}}
+    grid = _aged_mrt_grid(raw)
+    assert len(grid) == 26
+    assert grid[0] == 7.5 and grid[-1] == 20.0
+
+    base = load_config(ROOT / "configs" / "plan039_cdl_wide_beam_bler.yaml")
+    data = dataclass_to_dict(base)
+    data["channel"]["ue_speed_kmh"] = 60.0
+    data["transmission"].update({
+        "tx_scheme": "PLAN039_AGED_MRT_PRG6",
+        "aged_csi_ms": 40.0,
+    })
+    data["channel_estimation"]["ce_method"] = "PLAN039_PRG_COMMON_REFERENCE_PDP"
+    cfg = config_from_dict(data)
+    assert cfg.transmission.aged_csi_ms == 40.0
+    data["transmission"]["aged_csi_ms"] = 0.0
+    with pytest.raises(ValueError, match="aged_csi_ms"):
+        config_from_dict(data)
+
+
 def test_stage1b_runs_only_method1_and_prg_estimated_curves() -> None:
     freeze = {"selected": {
         "manifest": "/tmp/selected.json",
@@ -165,6 +197,31 @@ def test_stage1b_can_reuse_completed_legacy_superset_batch(tmp_path) -> None:
     assert _completed_batch_covers(
         directory, ("b0__plan039_common_reference_pdp",), [10.0], 0, 1000
     )
+
+
+def test_transparent_sidon_copies_only_completed_method1_intervals(tmp_path) -> None:
+    batches = tmp_path / "estimated_confirm" / "batches"
+    completed = batches / "completed"
+    completed.mkdir(parents=True)
+    (completed / "summary.csv").write_text(
+        "variant_id,snr_db,absolute_trial_start,absolute_trial_stop,n_trials\n"
+        "sidon_selected__plan039_common_reference_pdp,13.75,0,1000,1000\n"
+        "sidon_selected__plan039_common_reference_pdp,14.0,0,1000,1000\n"
+        "b0__plan039_common_reference_pdp,13.75,0,1000,1000\n",
+        encoding="utf-8",
+    )
+    (completed / "trial_metrics.csv").write_text("variant_id\n", encoding="utf-8")
+    (completed / "batch_receipt.json").write_text("{}\n", encoding="utf-8")
+    incomplete = batches / "incomplete"
+    incomplete.mkdir()
+    (incomplete / "summary.csv").write_text(
+        "variant_id,snr_db,absolute_trial_start,absolute_trial_stop,n_trials\n"
+        "sidon_selected__plan039_common_reference_pdp,16.0,1000,2000,1000\n",
+        encoding="utf-8",
+    )
+    assert _completed_method1_sidon_intervals(tmp_path) == {
+        (0, 1000): [13.75, 14.0],
+    }
 
 
 def test_prg_common_reference_covariance_omits_cdd_shift() -> None:

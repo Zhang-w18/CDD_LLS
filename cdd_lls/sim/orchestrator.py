@@ -32,7 +32,12 @@ from cdd_lls.phy.estimators import (
     TDLTimeFrequencyCovariance,
 )
 from cdd_lls.phy.ldpc import SionnaLDPCAdapter
-from cdd_lls.phy.precoding import build_precoder, equivalent_channel, normalize_delay_vector
+from cdd_lls.phy.precoding import (
+    build_aged_mrt_prg_precoder,
+    build_precoder,
+    equivalent_channel,
+    normalize_delay_vector,
+)
 from cdd_lls.phy.qam import qam_demapper_maxlog, qam_modulate
 from cdd_lls.phy.resource_grid import build_resource_grid, local_indices_for_subcarriers
 from cdd_lls.sim.stats import interpolate_target_snr, save_csv, save_json, snr_values
@@ -385,7 +390,10 @@ class CDDLinkLevelOrchestrator:
         beam8_mode = codebook_type in {
             "dft_2x8_same_pol", "wide_beam_split", "angular_full_coverage_ultrawide"
         }
-        if codebook_type in {"wide_beam_split", "angular_full_coverage_ultrawide"}:
+        aged_mrt = tx_scheme == "PLAN039_AGED_MRT_PRG6"
+        if aged_mrt:
+            precoder = None
+        elif codebook_type in {"wide_beam_split", "angular_full_coverage_ultrawide"}:
             precoder = build_plan039_precoder(
                 grid,
                 tx_scheme,
@@ -426,9 +434,10 @@ class CDDLinkLevelOrchestrator:
             rf = frequency_covariance(delays_s, powers, grid.n_sc, float(grid.scs_khz) * 1e3)
             if codebook_type in {"wide_beam_split", "angular_full_coverage_ultrawide"}:
                 frequencies = np.arange(grid.n_sc, dtype=float) * float(grid.scs_khz) * 1e3
+                delay_indices = [] if aged_mrt else precoder.metadata["delay_grid_indices"]
+                alpha = np.ones(grid.n_sc) if aged_mrt else precoder.metadata["alpha"]
                 rf = plan039_frequency_covariance(
-                    method, frequencies, context.plan039_arrays, precoder.metadata["delay_grid_indices"],
-                    precoder.metadata["alpha"],
+                    method, frequencies, context.plan039_arrays, delay_indices, alpha,
                 )
             elif method == "BEAM8_CDD_AWARE_LMMSE":
                 delta = np.arange(grid.n_sc)[:, None] - np.arange(grid.n_sc)[None, :]
@@ -453,6 +462,9 @@ class CDDLinkLevelOrchestrator:
         cb_errors = 0
         goodput_bits = 0
         ce_nmse_values: List[float] = []
+        precoder_power_min = float("inf")
+        precoder_power_max = 0.0
+        aged_replay_error_max = 0.0
         trials = 0
         while trials < max_trials:
             trials += 1
@@ -463,8 +475,29 @@ class CDDLinkLevelOrchestrator:
             payload_rng = np.random.default_rng(payload_seed)
             data_rng = np.random.default_rng(data_noise_seed)
             pilot_rng = np.random.default_rng(pilot_noise_seed)
-            channel = context.generate(absolute_trial - 1)
-            true_g = equivalent_channel(channel.H, precoder.C)[0]
+            if aged_mrt:
+                age_s = float(cfg.transmission.aged_csi_ms) * 1e-3
+                channel, old_channel, replay_error = context.generate_with_aged_csi(
+                    absolute_trial - 1, age_s
+                )
+                weights = build_aged_mrt_prg_precoder(
+                    old_channel,
+                    prg_size_rb=int(cfg.resource.prg_size_rb),
+                    normalize=True,
+                )[0]
+                power = np.sum(np.abs(weights) ** 2, axis=1)
+                precoder_power_min = min(precoder_power_min, float(np.min(power)))
+                precoder_power_max = max(precoder_power_max, float(np.max(power)))
+                aged_replay_error_max = max(aged_replay_error_max, float(replay_error))
+                true_g = equivalent_channel(channel.H, weights)[0]
+            else:
+                channel = context.generate(absolute_trial - 1)
+                assert precoder is not None
+                weights = precoder.C
+                power = np.sum(np.abs(weights) ** 2, axis=1)
+                precoder_power_min = min(precoder_power_min, float(np.min(power)))
+                precoder_power_max = max(precoder_power_max, float(np.max(power)))
+                true_g = equivalent_channel(channel.H, weights)[0]
             true_pilot = true_g[:, grid.pilot_symbol_indices, pilot_sc_local]
             true_data = true_g[:, grid.data_symbol_indices, data_sc_local]
             payload = None
@@ -526,8 +559,11 @@ class CDDLinkLevelOrchestrator:
                     "filter_condition_number": float(estimator.condition_number) if estimator else float("nan"),
                     "filter_numerical_loading": float(estimator.numerical_jitter) if estimator else 0.0,
                     "filter_minimum_singular_value": float(estimator.minimum_singular_value) if estimator else float("nan"),
-                    "precoder_power_min": float(np.min(np.sum(np.abs(precoder.C) ** 2, axis=1))),
-                    "precoder_power_max": float(np.max(np.sum(np.abs(precoder.C) ** 2, axis=1))),
+                    "precoder_power_min": float(np.min(power)),
+                    "precoder_power_max": float(np.max(power)),
+                    "precoder_type": "aged_mrt_prg6" if aged_mrt else "static",
+                    "precoder_csi_age_ms": float(cfg.transmission.aged_csi_ms),
+                    "aged_csi_replay_error": float(replay_error) if aged_mrt else 0.0,
                 })
             if trials >= target_trials and (min_errors <= 0 or tb_errors >= min_errors):
                 break
@@ -572,8 +608,15 @@ class CDDLinkLevelOrchestrator:
             "realization_seed": int(cfg.fixed_cdl_statistics.realization_seed),
             "covariance_realizations": int(cfg.fixed_cdl_statistics.covariance_realizations),
             "mean_aod_deg": float(cfg.fixed_cdl_statistics.mean_aod_deg),
-            "precoder_raw_power_min": float(precoder.metadata["raw_power_min"]),
-            "precoder_raw_power_max": float(precoder.metadata["raw_power_max"]),
+            "precoder_raw_power_min": float(
+                precoder_power_min if aged_mrt else precoder.metadata["raw_power_min"]
+            ),
+            "precoder_raw_power_max": float(
+                precoder_power_max if aged_mrt else precoder.metadata["raw_power_max"]
+            ),
+            "precoder_type": "aged_mrt_prg6" if aged_mrt else "static",
+            "precoder_csi_age_ms": float(cfg.transmission.aged_csi_ms),
+            "aged_csi_replay_error_max": float(aged_replay_error_max),
         })
         return row
 

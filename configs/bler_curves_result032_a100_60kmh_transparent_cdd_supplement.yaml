@@ -1,0 +1,65 @@
+schema: plan032-tdl-mobility-v1
+run_kind: formal
+curve_set: transparent_cdd_supplement
+output_dir: outputs/experiment032_tdl_mobility/20260906_main/transparent_cdd_supplement
+seed: 20260727
+batch_size: 20
+target_total_trials_by_snr:
+  14: 10000
+  14.25: 10000
+  14.5: 10000
+  14.75: 10000
+  15: 10000
+  15.25: 10000
+  15.5: 10000
+  15.75: 10000
+  16: 13960
+  16.25: 19300
+  16.5: 32920
+  16.75: 40000
+  17: 38140
+  17.25: 27040
+  17.5: 14760
+  17.75: 26320
+  18: 33340
+  18.25: 40000
+  18.5: 14040
+  18.75: 15800
+  19: 16900
+  19.25: 21080
+  19.5: 30780
+  19.75: 50000
+  20: 33340
+speed_kmh: 60
+feedback_period_slots: 10
+history_symbol_index: 140
+snr_db:
+  - 14
+  - 14.25
+  - 14.5
+  - 14.75
+  - 15
+  - 15.25
+  - 15.5
+  - 15.75
+  - 16
+  - 16.25
+  - 16.5
+  - 16.75
+  - 17
+  - 17.25
+  - 17.5
+  - 17.75
+  - 18
+  - 18.25
+  - 18.5
+  - 18.75
+  - 19
+  - 19.25
+  - 19.5
+  - 19.75
+  - 20
+manifest:
+  path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.json
+  sha256_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_manifest.sha256
+  approval_path: outputs/experiment028_csi_curves/20260803_main/a100_comb6/manifest/source_approval.json

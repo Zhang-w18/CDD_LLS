@@ -105,6 +105,7 @@ class TransmissionConfig:
     cdd_base_delay: float = 8
     prg_codebook: str = "qpsk_dft"
     prg_cycling_order: Optional[List[int]] = None
+    aged_csi_ms: float = 0.0
 
 
 @dataclass
@@ -358,7 +359,12 @@ def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
             supported = {"BASELINE", "POLARIZATION_CYCLING", "BEAM_CYCLING", "BEAM_CDD"}
         else:
             supported = (
-                {"BEAM8_B0_QC", "BEAM8_SIDON_SELECTED", "BEAM8_PRECODER_CYCLING"}
+                {
+                    "BEAM8_B0_QC",
+                    "BEAM8_SIDON_SELECTED",
+                    "BEAM8_PRECODER_CYCLING",
+                    "PLAN039_AGED_MRT_PRG6",
+                }
                 if codebook_type == "angular_full_coverage_ultrawide"
                 else {"BEAM8_B0_QC", "BEAM8_S0_SIDON", "BEAM8_PRECODER_CYCLING"}
             )
@@ -394,12 +400,20 @@ def _validate_config(config: PlatformConfig, source_path: str = "") -> None:
             if ce_method not in allowed_ce:
                 raise ValueError(f"Plan-039 CE method must be one of {sorted(allowed_ce)}. config={source_path}")
             scheme = str(config.transmission.tx_scheme).upper()
-            if scheme == "BEAM8_PRECODER_CYCLING" and ce_method not in {"IDEAL", "PLAN039_PRG_COMMON_REFERENCE_PDP"}:
-                raise ValueError("Plan-039 cycling requires IDEAL or PRG common-reference PDP estimation.")
-            if scheme != "BEAM8_PRECODER_CYCLING" and ce_method == "PLAN039_PRG_COMMON_REFERENCE_PDP":
-                raise ValueError("Plan-039 PRG estimator is only valid for precoder cycling.")
-            if scheme == "BEAM8_PRECODER_CYCLING" and ce_method == "PLAN039_TRANSPARENT_COMMON_REFERENCE_PDP":
+            prg_schemes = {"BEAM8_PRECODER_CYCLING", "PLAN039_AGED_MRT_PRG6"}
+            if scheme in prg_schemes and ce_method not in {"IDEAL", "PLAN039_PRG_COMMON_REFERENCE_PDP"}:
+                raise ValueError("Plan-039 PRG schemes require IDEAL or PRG common-reference PDP estimation.")
+            if scheme not in prg_schemes and ce_method == "PLAN039_PRG_COMMON_REFERENCE_PDP":
+                raise ValueError("Plan-039 PRG estimator is only valid for cycling or aged MRT.")
+            if scheme in prg_schemes and ce_method == "PLAN039_TRANSPARENT_COMMON_REFERENCE_PDP":
                 raise ValueError("Plan-039 full-band transparent estimator is only valid for CDD schemes.")
+            if scheme == "PLAN039_AGED_MRT_PRG6":
+                if float(config.transmission.aged_csi_ms) <= 0.0:
+                    raise ValueError("Plan-039 aged MRT requires transmission.aged_csi_ms > 0.")
+                if int(config.resource.prg_size_rb) != 6:
+                    raise ValueError("Plan-039 aged MRT is frozen to 6-RB PRGs.")
+            elif float(config.transmission.aged_csi_ms) != 0.0:
+                raise ValueError("transmission.aged_csi_ms is only valid for Plan-039 aged MRT.")
         elif codebook_type == "dft_2x8_same_pol":
             allowed_ce = {"IDEAL", "BEAM8_PRG_LMMSE", "BEAM8_CDD_AWARE_LMMSE"}
             if ce_method not in allowed_ce:

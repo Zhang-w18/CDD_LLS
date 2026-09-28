@@ -5,6 +5,10 @@
 > 本次改版改变了 CDL 角度、波束定义、Sidon 选择和接收机曲线集合；此前
 > `outputs/experiment039_cdl_beam_bler/prepare/` 下使用旧配置生成的产物不得作为本 plan 的
 > validate、smoke 或性能证据，也不得复用其 beam/statistics cache。
+>
+> 2026-09-28 补充冻结：增加一条 `60 km/h + 40 ms outdated CSI + PRG6 MRT` 的
+> estimated-CSI BLER 曲线。不做 prescan，直接在 `7.5:0.5:20 dB` 运行正式仿真；该补充曲线
+> 改变速度和发射端知识，必须与原 3 km/h 三曲线分组报告，不作配对增益归因。
 
 ## 1. 目的、研究问题与解释边界
 
@@ -14,6 +18,11 @@
 1. 等差时延 `B0_QC` CDD；
 2. 从严格 Sidon 集中按 DMRS 折叠距离和独立 ideal-CSI 预扫描选择的 `SIDON_SELECTED` CDD；
 3. 8 个 6-RB PRG 依次使用 8 个窄波束的 `PRG6_CYCLING`。
+
+补充实验另运行 `PLAN039_AGED_MRT_PRG6`：UE 速度为 60 km/h，发射端只使用当前 PDSCH
+slot 起点之前 40 ms 的同一 realization 完美物理 CSI，在每个 6-RB PRG 内由两根 Rx 和该 PRG
+全部子载波的 Gram 矩阵最大特征向量形成未量化 rank-1 MRT。该曲线用于给出明确反馈时延下的
+闭环参考，不改变前三条 3 km/h 曲线的冻结定义。
 
 实验先完成波束/信道审计、严格 Sidon 搜索和阶段 1A ideal-CSI/NMSE 预扫描。
 根据 2026-09-26 的研究者决策，当前不再运行原定阶段 1B ideal-CSI 确认，而是直接在独立
@@ -54,6 +63,12 @@ ideal-CSI 正式确认和方法二同样暂缓，不作为当前运行的前置 
 | 接收合并 | 两根 Rx 分别估计等效 rank-1 信道，data RE 上做 MRC；不做跨 Rx 空间 LMMSE |
 | LLR | 沿用 plan-035，不额外加入 channel-estimation-error-aware 噪声项 |
 | 执行设备 | CPU-only；保存 placement、batch size、墙钟时间和峰值 RSS |
+
+补充 MRT 曲线除以下覆盖项外沿用本表：速度改为 60 km/h，最大经典 Doppler 约 222.38 Hz；
+发射端使用 40 ms outdated CSI；MRT 权值在每个 PRG 内和整个 10-symbol slot 内固定。接收端仍使用
+两个 DMRS symbol 的 `PLAN039_PRG_COMMON_REFERENCE_PDP` estimated-CSI LMMSE 和 MRC，不使用
+outdated CSI。原 3 km/h 曲线及其 reference SNR 定义保持不变；补充曲线仍以同一超宽参考波束
+长期接收功率定义噪声，因此横轴口径一致，但速度和发射知识不同，不能据此把差值归因为 MRT 本身。
 
 人工 CDD delay 是频域线性相位对应的数字循环移位，不占用真实传播时延或 CP 预算。
 CDL 路径仍按连续物理时延直接求频响；本轮不把物理路径量化到 FFT tap。
@@ -634,6 +649,36 @@ cycling 方法一运行 CE-only NMSE，不做 estimated-CSI LDPC 解码。若 10
 后续若恢复，必须继续使用已冻结候选和 evaluation seed namespace，并通过新的 absolute trial 区间追加；
 不得将阶段 1A selection trial 合并为正式数据。
 
+2026-09-28 研究者恢复其中的 `SIDON_SELECTED` CDD 透明 estimated-CSI 曲线。不做
+prescan；使用 `PLAN039_TRANSPARENT_COMMON_REFERENCE_PDP`、已冻结 Sidon delay、evaluation seeds
+和方法一 Sidon 曲线已完成的相同 SNR 点及 absolute trial 区间直接正式扫描。runner
+只从同时存在 `summary.csv`、`trial_metrics.csv` 和 `batch_receipt.json` 的方法一批次冻结
+覆盖，不读取阶段 1A trial，不自适应增加新点或超过方法一的 trial 数。其余方法二、
+ideal-CSI 和 NMSE gate 仍暂缓。
+
+### 7.5 补充正式曲线：60 km/h、40 ms outdated-CSI MRT
+
+本补充不做 selection/prescan，也不读取阶段 1A 性能来调整 SNR。唯一曲线为
+`aged_mrt_prg6__60kmh__csi_age40ms`，发射方案 `PLAN039_AGED_MRT_PRG6`，接收机为
+`PLAN039_PRG_COMMON_REFERENCE_PDP`。每个 absolute trial 先以同一组 CDL 随机初相位生成当前
+slot 的 10 个 OFDM-symbol 信道，再以反向速度在 $+40$ ms 取样，等价得到同一 realization
+在 $-40$ ms 的物理频域 CSI；必须核对两次生成的 $t=0$ 信道最大逐元素误差不超过
+$10^{-10}$。不得把独立 realization 当作 outdated CSI。
+
+对每个 6-RB PRG，令 $\mathbf H_{\rm old}[k]\in\mathbb C^{2\times32}$，冻结
+
+$$
+\mathbf G_{\rm old}^{(p)}
+=\sum_{k\in p}\mathbf H_{\rm old}^{H}[k]\mathbf H_{\rm old}[k],
+\qquad
+\mathbf w_p=\operatorname{eigvec}_{\max}(\mathbf G_{\rm old}^{(p)}),
+\qquad \|\mathbf w_p\|_2^2=1.
+$$
+
+不量化、不做波束码本投影，8 个 PRG 分别求权值。保存每 trial 的权值功率上下界、CSI age、
+current/stale replay 误差、信道/载荷/噪声 seed 和 CE NMSE。该曲线不与 3 km/h 三曲线共享
+realization，也不执行 paired bootstrap；只报告自身 BLER、Wilson 95% 区间和 CE NMSE。
+
 ## 8. 公平性、配对和随机种子
 
 每个 `stage + SNR + absolute trial` 内，同阶段的全部方案共享 fixed-CDL realization、
@@ -677,6 +722,14 @@ bracket，保存全部 bracket，并以最低 SNR 的首次下降 crossing 为�
 NMSE；相关 gain 标记 `not_comparable_no_bracket`。不得根据结果后验修改预算、NMSE gate、
 候选数、SNR cap 或主比较。
 
+补充 aged-MRT 曲线冻结为 `7.5:0.5:20 dB` 共 26 点，每点固定 1,000 trials，总计
+26,000 trials；不做 prescan、不加密、不自适应追加、不以错误数提前停止。若 10% 或 1%
+crossing 有相邻真实双侧 bracket，可按本节相同 log-BLER 线性插值作描述性报告；否则只报告
+实测点，不外推。正式运行前必须通过配置校验、aged/current 同 realization replay、40 ms 时间
+索引、PRG 常值和单位功率定向测试；无需重复原 stage-0 角度/波束设计搜索。每个 SNR 点独立
+保存展开配置、trial 数据和完成回执，最多并行运行 3 个互不重叠的 SNR 点；并行只改变调度，
+不得改变逐点 seed 派生或 absolute trial 区间。
+
 ## 10. 实现范围、测试与 smoke
 
 ### 10.1 预计代码和配置范围
@@ -696,6 +749,8 @@ NMSE；相关 gain 标记 `not_comparable_no_bracket`。不得根据结果后验
 6. 新增或更新本地分析脚本，只读取保存的 CSV/NPY/JSON，完成角度谱、方向图、相关热力图、
    bracket、Wilson 区间、paired bootstrap、crossing、gain 和 NMSE；
 7. 回归 plan-037 CDL 平台、`fixed_cdl_statistics` smoke 和现有通用 ideal 链路。
+8. 增加 `--stage aged_mrt_formal`：从已通过的 ASD25 几何/波束 manifest 派生 60 km/h 时间
+   协方差 manifest，只执行第 7.5 节固定 26 点正式批次，支持完整批次校验后幂等复用。
 
 ### 10.2 定向测试
 
@@ -714,6 +769,8 @@ NMSE；相关 gain 标记 `not_comparable_no_bracket`。不得根据结果后验
 10. PRG cycling 映射准确，每个滤波器只读取本 PRG pilot；
 11. estimated MRC、3 条 CE/BLER 记录、B0/Sidon 配对和 interval resume/merge；
 12. plan-037/fixed-CDL/通用 PDSCH 定向回归不改变现有行为。
+13. aged-MRT 的 40 ms 反向时间取样与同一 realization 重放一致、PRG Gram 最大特征向量使用
+    两根 Rx、每子载波单位功率、CSI age 字段及 26 点固定正式网格。
 
 ### 10.3 Smoke
 
@@ -744,6 +801,8 @@ denominator、滤波器残差、seed 配对、CPU placement、RSS、耗时和数
 - BLER/NMSE 汇总、errors/trials/Wilson 区间、真实 bracket、crossing、paired-bootstrap gain/penalty 和
   所有未达到目标状态；
 - CPU placement、batch/RSS/墙钟日志、失败或作废运行清单。
+- 补充 aged-MRT 的 60 km/h 派生 manifest、展开 YAML、26 点 summary、26,000 行 trial metrics、
+  40 ms replay audit 和不运行 prescan/自适应追加的冻结回执。
 
 本地至少生成：角度功率谱、参考/8 窄波束方向图、统一增益切面、8×8 相关热力图、阶段 1A
 ideal BLER 趋势、阶段 1B estimated BLER/CE NMSE 和 crossing/gain 汇总表。BLER 图使用
@@ -774,6 +833,8 @@ checkpoint。
    写入阶段 1B 报告，并按第 9 节自适应追加完成配对/恢复审计；
 8. 本地生成分析表、图和两版 result，交研究者确认；
 9. ideal-CSI 正式确认和方法二只在研究者后续明确恢复时执行。
+10. 研究者 2026-09-28 已授权直接运行 `--stage aged_mrt_formal`；该阶段不经过 prescan，完成
+    固定 26 点后把结果追加到两版 result，保持与原 3 km/h 结果的比较边界。
 
 正式 trial 1 前填写：
 

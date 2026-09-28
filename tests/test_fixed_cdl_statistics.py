@@ -108,3 +108,30 @@ def test_fixed_cdl_replays_realization_but_resamples_small_scale_phase() -> None
     assert analytic.shape == (4, 4)
     np.testing.assert_allclose(analytic, analytic.conj().T, atol=1e-12)
     assert np.min(np.linalg.eigvalsh(analytic)) >= -1e-10
+
+
+def test_fixed_cdl_generates_same_realization_aged_csi_without_long_time_axis() -> None:
+    base = load_config(ROOT / "configs" / "smoke_fixed_cdl_statistics_32tx_2rx.yaml")
+    data = dataclass_to_dict(base)
+    data["antenna"]["n_tx"] = 4
+    data["channel"]["ue_speed_kmh"] = 60.0
+    data["fixed_cdl_statistics"].update({
+        "covariance_realizations": 1,
+        "bs_vertical_aes": 2,
+        "bs_horizontal_aes": 2,
+        "bs_vertical_txrus_per_pol": 1,
+        "bs_horizontal_txrus_per_pol": 2,
+        "ssb_horizontal_beams": 2,
+        "secondary_horizontal_beams": 4,
+    })
+    cfg = config_from_dict(data)
+    grid = build_resource_grid(cfg.resource)
+    channel = FixedCDLStatisticsChannel(cfg, grid)
+    current, old, replay_error = channel.generate_with_aged_csi(0, 0.040)
+    replay, old_replay, replay_error_2 = channel.generate_with_aged_csi(0, 0.040)
+    assert current.H.shape == (1, 2, 4, grid.n_symbols, grid.n_sc)
+    assert old.shape == (1, 2, 4, grid.n_sc)
+    assert replay_error <= 1e-10 and replay_error_2 <= 1e-10
+    np.testing.assert_array_equal(current.H, replay.H)
+    np.testing.assert_array_equal(old, old_replay)
+    assert not np.array_equal(old, current.H[:, :, :, 0, :])

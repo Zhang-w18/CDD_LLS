@@ -106,7 +106,6 @@ class SionnaLDPCAdapter:
         decoded = [self.decode_one(i, llr) for i, llr in enumerate(llrs_by_cb)]
         return summarize_decode(decoded, reference_payload_bits_by_cb)
 
-
 def summarize_decode(
     decoded_bits_by_cb: Sequence[np.ndarray],
     reference_payload_bits_by_cb: Sequence[np.ndarray],

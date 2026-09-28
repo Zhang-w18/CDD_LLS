@@ -158,6 +158,7 @@ class FixedCDLStatisticsChannel:
         self.settings = config.fixed_cdl_statistics
         self._tf = tf
         self._sionna_config = sionna_config
+        self._topology_type = Topology
         carrier = float(config.channel.carrier_frequency_hz)
         precision = "double"
 
@@ -526,16 +527,30 @@ class FixedCDLStatisticsChannel:
             delays = np.r_[delays, delays[0]]
         return delays, dopplers, covariance
 
-    def _coefficients(self, seed: int) -> np.ndarray:
+    def _coefficients(
+        self,
+        seed: int,
+        num_time_samples: int | None = None,
+        sampling_frequency_hz: float | None = None,
+        topology=None,
+    ) -> np.ndarray:
         seed = int(seed)
         self._tf.random.set_seed(seed % (2**31 - 1))
         self._sionna_config.seed = seed
+        time_samples = int(self.grid.n_symbols if num_time_samples is None else num_time_samples)
+        sampling_frequency = float(
+            1.0 / float(self.grid.ofdm_symbol_duration_s)
+            if sampling_frequency_hz is None
+            else sampling_frequency_hz
+        )
+        if time_samples <= 0 or not np.isfinite(sampling_frequency) or sampling_frequency <= 0.0:
+            raise ValueError("Fixed-CDL time sampling must be finite and positive.")
         h, _ = self._model._cir_sampler(
-            int(self.grid.n_symbols),
-            1.0 / float(self.grid.ofdm_symbol_duration_s),
+            time_samples,
+            sampling_frequency,
             self._k_factor,
             self._rays,
-            self._topology,
+            self._topology if topology is None else topology,
         )
         h = self._tf.transpose(h, [0, 2, 4, 1, 5, 3, 6])
         ae = np.asarray(h.numpy()[0, 0, :, 0, :, :, :], dtype=np.complex128)
@@ -586,6 +601,66 @@ class FixedCDLStatisticsChannel:
             sample_period_ns=float("nan"),
             backend="fixed_cdl_statistics",
             metadata=self.metadata(),
+        )
+
+    def generate_with_aged_csi(
+        self,
+        realization_index: int,
+        age_s: float,
+    ) -> tuple[TDLRealization, np.ndarray, float]:
+        """Return the current slot and exact same-realization CSI from ``age_s`` earlier.
+
+        The current slot is sampled at the normal OFDM-symbol spacing.  The stale
+        sample is evaluated at negative time by replaying the same CDL random
+        phases with reversed velocity and taking the sample at ``+age_s``.  This
+        avoids generating every intermediate OFDM symbol over a long CSI age.
+        ``old_channel`` has shape ``[1,n_rx,n_tx,n_sc]``.
+        """
+        age = float(age_s)
+        if not np.isfinite(age) or age <= 0.0:
+            raise ValueError("age_s must be finite and positive.")
+        seed = self._seed(0x43444C, int(realization_index))
+        current_coefficients = self._coefficients(seed)
+        reverse_topology = self._topology_type(
+            velocities=-self._topology.velocities,
+            moving_end="rx",
+            los_aoa=self._topology.los_aoa,
+            los_aod=self._topology.los_aod,
+            los_zoa=self._topology.los_zoa,
+            los_zod=self._topology.los_zod,
+            los=self._topology.los,
+            distance_3d=self._topology.distance_3d,
+            tx_orientations=self._topology.tx_orientations,
+            rx_orientations=self._topology.rx_orientations,
+        )
+        reverse_pair = self._coefficients(
+            seed,
+            num_time_samples=2,
+            sampling_frequency_hz=1.0 / age,
+            topology=reverse_topology,
+        )
+        replay_error = float(np.max(np.abs(reverse_pair[0] - current_coefficients[0])))
+        if replay_error > 1e-10:
+            raise RuntimeError(
+                "Fixed-CDL aged-CSI replay changed the t=0 channel: "
+                f"max error={replay_error}."
+            )
+        current_response = self._response(current_coefficients)
+        old_response = self._response(reverse_pair[-1:])
+        current_h = np.transpose(current_response, (1, 3, 0, 2))[None, ...]
+        old_h = np.transpose(old_response, (1, 3, 0, 2))[None, ..., 0, :]
+        return (
+            TDLRealization(
+                taps=np.empty((0,), dtype=np.complex128),
+                H=current_h,
+                pdp=self.powers.copy(),
+                tap_delays=self.delays_s.copy(),
+                sample_period_ns=float("nan"),
+                backend="fixed_cdl_statistics",
+                metadata={**self.metadata(), "aged_csi_age_s": age},
+            ),
+            old_h,
+            replay_error,
         )
 
     def metadata(self) -> Dict[str, object]:
